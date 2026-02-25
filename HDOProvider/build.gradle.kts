@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 10
+version = 4
 
 android {
     buildFeatures {
@@ -10,10 +10,8 @@ android {
 cloudstream {
     language = "id"
     // All of these properties are optional, you can safely remove them
-
-    description = "Multi Language Movies and Series Provider"
-    authors = listOf("NivinCNC,Phisher98")
-
+    description = "HDO provider"
+    authors = listOf("NivinCNC, CodeSanz")
     /**
      * Status int as the following:
      * 0: Down
@@ -23,12 +21,18 @@ cloudstream {
      * */
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
-        "Movie",
-        "TvSeries"
+        "Movies",
+        "TvSeries",
     )
 
-    iconUrl = "https://github.com/NivinCNC/CNCVerse-Cloud-Stream-Extension/raw/refs/heads/master/MovieBoxProvider/icon.png"
+    iconUrl = "https://images.dwncdn.net/images/t_app-icon-l/p/b0c9663c-0d61-4941-b12f-91c58c06189f/1137087733/hdo-box-logo"
 
-    requiresResources = true
     isCrossPlatform = false
+
+}
+
+dependencies {
+    // FIXME remove this when crossplatform is fully supported
+    val cloudstream by configurations
+    cloudstream("com.lagradost:cloudstream3:pre-release")
 }
