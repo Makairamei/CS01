@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.*
 
 class Dubbindo : MainAPI() {
     override var mainUrl = "https://www.dubbindo.site"
-    override var name = "Dubbindo"
+    override var name = "Dubbindo🛖"
     override val hasMainPage = true
     override var lang = "id"
     override val hasQuickSearch = false
