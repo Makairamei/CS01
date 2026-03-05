@@ -18,7 +18,7 @@ open class DutaMovie : MainAPI() {
     companion object {
         var context: android.content.Context? = null
     }
-    override var mainUrl = "https://malcontentgames.com"
+    override var mainUrl = "https://pioneerdir.com"
     private var directUrl: String? = null
     override var name = "DutaMovie🎉"
     override val hasMainPage = true
@@ -176,7 +176,7 @@ open class DutaMovie : MainAPI() {
             addActors(actors)
             this.recommendations = recommendations
             this.duration = duration ?: 0
-            addTrailer(trailer)
+            addTrailer(trailer, referer = mainUrl, addRaw = true)
         }
     }
 
@@ -236,7 +236,7 @@ open class DutaMovie : MainAPI() {
         addActors(actors)
         this.recommendations = recommendations
         this.duration = duration ?: 0
-        addTrailer(trailer)
+        addTrailer(trailer, referer = mainUrl, addRaw = true)
     }
 }
 

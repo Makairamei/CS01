@@ -1,25 +1,20 @@
-package com.Anoboy
+package com.anoboy
 
-import com.lagradost.api.Log
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.lagradost.cloudstream3.utils.getAndUnpack
-import okhttp3.FormBody
-import org.json.JSONObject
-import java.net.URI
 
-class Gofile : ExtractorApi() {
-    override val name = "Gofile"
-    override val mainUrl = "https://gofile.io"
-    override val requiresReferer = false
-    private val mainApi = "https://api.gofile.io"
+class BloggerExtractor : ExtractorApi() {
+    override val name = "Blogger"
+    override val mainUrl = "https://www.blogger.com"
+    override val requiresReferer = true
+
+    private val rpcId = "WcwnYd"
 
     override suspend fun getUrl(
         url: String,
@@ -27,151 +22,122 @@ class Gofile : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        val fixedUrl = if (url.startsWith("//")) "https:$url" else url
 
-        try {
-            val id = Regex("/(?:\\?c=|d/)([\\da-zA-Z-]+)").find(url)?.groupValues?.get(1) ?: return
-            val responseText = app.post("$mainApi/accounts").text
-            val json = JSONObject(responseText)
-            val token = json.getJSONObject("data").getString("token")
+        if (fixedUrl.contains("blogger.googleusercontent.com", true)) {
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    fixedUrl,
+                    INFER_TYPE
+                ) {
+                    this.referer = referer ?: "$mainUrl/"
+                }
+            )
+            return
+        }
 
-            val globalJs = app.get("$mainUrl/dist/js/global.js").text
-            val wt = Regex("""appdata\.wt\s*=\s*["']([^"']+)["']""")
-                .find(globalJs)?.groupValues?.getOrNull(1) ?: return
+        val token = Regex("[?&]token=([^&]+)")
+            .find(fixedUrl)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?: return
 
-            val responseTextfile = app.get(
-                "$mainApi/contents/$id?wt=$wt",
-                headers = mapOf("Authorization" to "Bearer $token")
-            ).text
+        val page = app.get(fixedUrl, referer = referer ?: "$mainUrl/")
+        val html = page.text
 
-            val fileDataJson = JSONObject(responseTextfile)
+        val fSid = Regex("FdrFJe\":\"(\\d+)\"")
+            .find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?: return
+        val bl = Regex("cfb2h\":\"([^\"]+)\"")
+            .find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?: return
+        val hl = Regex("lang=\"([^\"]+)\"")
+            .find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.ifBlank { null }
+            ?: "en-US"
+        val reqId = (10000..99999).random()
 
-            val data = fileDataJson.getJSONObject("data")
-            val children = data.getJSONObject("children")
-            children.keys().asSequence().forEach { childId ->
-                val fileObj = children.getJSONObject(childId)
+        val payload = """[[["$rpcId","[\"$token\",\"\",0]",null,"generic"]]]"""
+        val apiUrl = "$mainUrl/_/BloggerVideoPlayerUi/data/batchexecute" +
+            "?rpcids=$rpcId&source-path=%2Fvideo.g&f.sid=$fSid&bl=$bl&hl=$hl&_reqid=$reqId&rt=c"
 
-                val link = fileObj.getString("link")
-                val fileName = fileObj.getString("name")
-                val fileSize = fileObj.getLong("size")
+        val response = app.post(
+            apiUrl,
+            data = mapOf("f.req" to payload),
+            referer = fixedUrl,
+            headers = mapOf(
+                "Origin" to mainUrl,
+                "Content-Type" to "application/x-www-form-urlencoded;charset=UTF-8",
+                "User-Agent" to USER_AGENT
+            )
+        ).text
 
-                callback.invoke(
-                    newExtractorLink(
-                        "Gofile",
-                        "Gofile",
-                        link
-                    ) {
-                        this.quality = getQuality(fileName)
-                        this.headers = mapOf("Cookie" to "accountToken=$token")
-                    }
-                )
+        val decoded = decodeUnicodeEscapes(response)
+        val urls = Regex("""https://[^\s"']+""")
+            .findAll(decoded)
+            .map { it.value }
+            .filter {
+                it.contains("googlevideo.com/videoplayback") ||
+                    it.contains("blogger.googleusercontent.com")
             }
-            //val firstFileId = children.keys().asSequence().first()
-            
+            .distinct()
+            .toList()
 
-            
-        } catch (e: Exception) {
-            Log.e("Gofile", "Error occurred: ${e.message}")
+        for (videoUrl in urls) {
+            val itag = Regex("[?&]itag=(\\d+)")
+                .find(videoUrl)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+            callback.invoke(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    videoUrl,
+                    INFER_TYPE
+                ) {
+                    this.referer = "$mainUrl/"
+                    this.quality = itagToQuality(itag)
+                }
+            )
         }
     }
 
-    private fun getQuality(fileName: String?): Int {
-        val match = Regex("(\\d{3,4})|(\\d+)[kK]").find(fileName ?: "")
-        return when {
-            match?.groupValues?.getOrNull(1)?.isNotEmpty() == true -> 
-                match.groupValues[1].toIntOrNull() ?: Qualities.Unknown.value
-            match?.groupValues?.getOrNull(2)?.isNotEmpty() == true -> {
-                val num = match.groupValues[2].toIntOrNull()
-                if (num == 1) 1080 else num?.times(1000) ?: Qualities.Unknown.value
-            }
+    private fun decodeUnicodeEscapes(input: String): String {
+        val unicodeRegex = Regex("""\\\\u([0-9a-fA-F]{4})""")
+        var output = unicodeRegex.replace(input) { match ->
+            match.groupValues[1].toInt(16).toChar().toString()
+        }
+        output = output.replace("\\/", "/")
+        output = output.replace("\\\\", "\\")
+        output = output.replace("\\\"", "\"")
+        return output
+    }
+
+    private fun itagToQuality(itag: Int?): Int {
+        return when (itag) {
+            18 -> Qualities.P360.value
+            22 -> Qualities.P720.value
+            37 -> Qualities.P1080.value
+            59 -> Qualities.P480.value
+            43 -> Qualities.P360.value
+            36 -> Qualities.P240.value
+            17 -> Qualities.P144.value
+            137 -> Qualities.P1080.value
+            136 -> Qualities.P720.value
+            135 -> Qualities.P480.value
+            134 -> Qualities.P360.value
+            133 -> Qualities.P240.value
+            160 -> Qualities.P144.value
             else -> Qualities.Unknown.value
         }
     }
-}
-
-class Mp4Upload : ExtractorApi() {
-    override var name = "Mp4Upload"
-    override var mainUrl = "https://www.mp4upload.com"
-    private val srcRegex = Regex("""player\.src\("(.*?)"""")
-    private val srcRegex2 = Regex("""player\.src\([\w\W]*src: "(.*?)"""")
-
-    override val requiresReferer = true
-    private val idMatch = Regex("""mp4upload\.com/(embed-|)([A-Za-z0-9]*)""")
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val realUrl = idMatch.find(url)?.groupValues?.get(2)?.let { id ->
-            "$mainUrl/embed-$id.html"
-        } ?: url
-        val response = app.get(realUrl)
-        val unpackedText = getAndUnpack(response.text)
-
-        val heightRegex = Regex("""<iframe[^>]*src=["']https?://[^"']*embed-[^"']*["'][^>]*height\s*=\s*"?(\d{3,4})""", RegexOption.IGNORE_CASE)
-        val quality = heightRegex.find(unpackedText)
-            ?.groupValues?.getOrNull(1)
-            ?.toIntOrNull()
-            ?: Qualities.Unknown.value
-
-        srcRegex.find(unpackedText)?.groupValues?.get(1)?.let { link ->
-            return listOf(
-                newExtractorLink(
-                    name,
-                    name,
-                    link,
-                ) {
-                    this.referer = url
-                    this.quality = quality ?: Qualities.Unknown.value
-                }
-            )
-        }
-        srcRegex2.find(unpackedText)?.groupValues?.get(1)?.let { link ->
-            return listOf(
-                newExtractorLink(
-                    name,
-                    name,
-                    link,
-                ) {
-                    this.referer = url
-                    this.quality = quality ?: Qualities.Unknown.value
-                }
-            )
-        }
-        return null
-    }
-}
-
-class YourUpload: ExtractorApi() {
-    override val name = "Yourupload"
-    override val mainUrl = "https://www.yourupload.com"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
-        val sources = mutableListOf<ExtractorLink>()
-        with(app.get(url).document) {
-            val quality = Regex("\\d{3,4}").find(this.select("title").text())?.groupValues?.get(0)
-            this.select("script").map { script ->
-                if (script.data().contains("var jwplayerOptions = {")) {
-                    val data =
-                        script.data().substringAfter("var jwplayerOptions = {").substringBefore(",\n")
-                    val link = tryParseJson<ResponseSource>(
-                        "{${
-                            data.replace("file", "\"file\"").replace("'", "\"")
-                        }}"
-                    )
-                    sources.add(
-                        newExtractorLink(
-                            source = name,
-                            name = name,
-                            url = link!!.file,
-                        ) {
-                            this.referer = url
-                            this.quality = getQualityFromName(quality)
-                        }
-                    )
-                }
-            }
-        }
-        return sources
-    }
-
-    private data class ResponseSource(
-        @JsonProperty("file") val file: String,
-    )
 }

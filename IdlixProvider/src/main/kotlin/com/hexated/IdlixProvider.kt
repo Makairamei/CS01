@@ -19,7 +19,7 @@ class IdlixProvider : MainAPI() {
     companion object {
         var context: android.content.Context? = null
     }
-    override var mainUrl = "https://tv12.idlixku.com"
+    override var mainUrl = "https://tv11.idlixku.com"
     private var directUrl = mainUrl
     override var name = "Idlix🎄"
     override val hasMainPage = true

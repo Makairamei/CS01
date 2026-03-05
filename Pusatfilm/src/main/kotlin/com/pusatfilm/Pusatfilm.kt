@@ -15,10 +15,11 @@ class Pusatfilm : MainAPI() {
     companion object {
         var context: android.content.Context? = null
     }
-    override var mainUrl = "https://v2.pusatfilm21info.net"
+    override var mainUrl = "https://v3.pusatfilm21info.com"
 
     override var name = "Pusatfilm🍖"
     override val hasMainPage = true
+    override val hasDownloadSupport = true
     override var lang = "id"
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries, TvType.Anime, TvType.AsianDrama)
@@ -161,16 +162,53 @@ class Pusatfilm : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val iframeEl = document.selectFirst("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe")
-        val iframe = listOf("src", "data-src", "data-litespeed-src")
-            .firstNotNullOfOrNull { key -> iframeEl?.attr(key)?.takeIf { it.isNotBlank() } }
-            ?.let { httpsify(it) }
+        val visited = linkedSetOf<String>()
+        var found = false
 
-        if (!iframe.isNullOrBlank()) {
-            val refererBase = runCatching { getBaseUrl(iframe) }.getOrDefault(mainUrl) + "/"
-            loadExtractor(iframe, refererBase, subtitleCallback, callback)
+        suspend fun parseCandidate(rawUrl: String?) {
+            val cleaned = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return
+            val fixed = runCatching { httpsify(fixUrl(cleaned)) }.getOrElse { return }
+            if (!visited.add(fixed)) return
+
+            // Use the current page as referer; many embed hosts expect this.
+            val pageReferer = data
+            loadExtractor(fixed, pageReferer, subtitleCallback) { link ->
+                found = true
+                callback(link)
+            }
+
+            if (fixed.contains("kotakajaib.me/file/")) {
+                val base = runCatching { getBaseUrl(fixed) }.getOrDefault("https://kotakajaib.me")
+                val fileId = fixed.substringAfter("/file/").substringBefore("?").substringBefore("/")
+                if (fileId.isNotBlank()) {
+                    val apiUrl = "$base/api/file/$fileId/download"
+                    if (visited.add(apiUrl)) {
+                        loadExtractor(apiUrl, pageReferer, subtitleCallback) { link ->
+                            found = true
+                            callback(link)
+                        }
+                    }
+                }
+            }
         }
-        return true
+
+        val iframeLinks = document.select("div.gmr-embed-responsive iframe, div.movieplay iframe, iframe")
+            .mapNotNull { iframe ->
+                listOf("src", "data-src", "data-litespeed-src")
+                    .firstNotNullOfOrNull { key -> iframe.attr(key).takeIf { it.isNotBlank() } }
+            }
+
+        val downloadLinks = document.select(
+            "li.pull-right a[href], a[href*='kotakajaib.me/file/'], a[title*=Download], a:contains(Download), a:contains(download), span.textdownload"
+        ).mapNotNull { el ->
+            when (el.tagName()) {
+                "span" -> el.parent()?.attr("href")
+                else -> el.attr("href")
+            }?.takeIf { it.isNotBlank() }
+        }
+
+        (iframeLinks + downloadLinks).forEach { parseCandidate(it) }
+        return found
     }
 
     private fun Element.getImageAttr(): String {

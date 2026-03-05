@@ -20,8 +20,8 @@ import org.jsoup.Jsoup
 
 
 class Layarasia : MainAPI() {
-    override var mainUrl = "https://layarasia.site"
-    override var name = "Layarasia⛄"
+    override var mainUrl = "https://layarasia.lol"
+    override var name = "Layarasia🐬"
     override val hasMainPage = true
     override var lang = "id"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)

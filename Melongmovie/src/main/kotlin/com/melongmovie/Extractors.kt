@@ -10,7 +10,10 @@ import com.lagradost.cloudstream3.utils.M3u8Helper.Companion.generateM3u8
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.extractors.VidStack
+import com.lagradost.cloudstream3.extractors.StreamWishExtractor
 import java.net.URI
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import org.mozilla.javascript.Context
 
 
 
@@ -72,6 +75,17 @@ class Melongfilmstrp2p : VidStack() {
     override var requiresReferer = true
 }
 
+class Ukokoko : VidStack() {
+    override var name = "Ukokoko"
+    override var mainUrl = "https://ukokoko.4meplayer.com"
+    override var requiresReferer = true
+}
+
+class Hglink : StreamWishExtractor() {
+    override val name = "Hglink"
+    override val mainUrl = "https://hglink.to"
+}
+
 open class Dintezuvio : ExtractorApi() {
     override val name = "Earnvids"
     override val mainUrl = "https://dintezuvio.com"
@@ -123,3 +137,5 @@ open class Dintezuvio : ExtractorApi() {
 	}
 
 }
+
+

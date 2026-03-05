@@ -1,87 +1,115 @@
 package com.reelshort
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
-import com.lagradost.cloudstream3.utils.*
-import org.json.JSONArray
-import org.json.JSONObject
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import java.net.URLEncoder
 
 class Reelshort : MainAPI() {
-    override var mainUrl = "https://api.sansekai.my.id"
-    override var name = "Reelshort💗"
+    override var mainUrl = buildBaseUrl()
+    override var name = "ReelShort💗"
     override var lang = "id"
     override val hasMainPage = true
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.AsianDrama)
 
     override val mainPage = mainPageOf(
-        "/api/reelshort/foryou" to "Untukmu",
-        "/api/reelshort/homepage" to "Beranda",
+        "/api/v1/reelshort/dramadub" to "Drama Dub",
+        "/api/v1/reelshort/newrelease" to "Rilis Baru",
+        "/api/v1/reelshort/recommend" to "Rekomendasi",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        if (page > 1) return newHomePageResponse(request.name, emptyList<SearchResponse>())
+        if (page > 1) return newHomePageResponse(request.name, emptyList())
 
-        val items = fetchItems(request.data)
-            .distinctBy { it.id }
-            .mapNotNull { it.toSearchResponse() }
+        val shelf = fetchShelfWithFallback(request.data)
+        val items = shelf?.books.orEmpty()
+            .mapNotNull { it.toSearchResult() }
+            .distinctBy { it.url }
 
         return newHomePageResponse(request.name, items)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val q = query.trim()
-        if (q.isBlank()) return emptyList()
+        val keyword = query.trim()
+        if (keyword.isBlank()) return emptyList()
 
-        val encoded = URLEncoder.encode(q, "UTF-8")
-        val fromSearch = fetchItems("/api/reelshort/search?query=$encoded")
-        val items = if (fromSearch.isNotEmpty()) {
-            fromSearch
-        } else {
-            listOf(
-                "/api/reelshort/foryou",
-                "/api/reelshort/homepage",
-            ).flatMap { fetchItems(it) }
-                .distinctBy { it.id }
-                .filter {
-                    it.title.contains(q, true) || it.description.orEmpty().contains(q, true)
-                }
-        }
-
-        return items.mapNotNull { it.toSearchResponse() }
+        val url = "$mainUrl/api/v1/reelshort/search?keywords=${encodeQuery(keyword)}"
+        val response = tryParseJson<SearchWrapper>(app.get(url).text)
+        return response?.results.orEmpty()
+            .mapNotNull { it.toSearchResult() }
+            .distinctBy { it.url }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val bookId = extractBookId(url)
-        val detail = fetchDetail(bookId)
-            ?: throw ErrorLoadingException("Detail Reelshort tidak ditemukan")
+        if (bookId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
-        val episodes = detail.chapters
-            .sortedBy { it.episodeNumber }
-            .map { chapter ->
-                newEpisode(
-                    LoadData(
-                        bookId = detail.bookId,
-                        chapterId = chapter.chapterId,
-                        episodeNumber = chapter.episodeNumber
-                    ).toJson()
-                ) {
-                    name = chapter.title.ifBlank { "EP ${chapter.episodeNumber}" }
-                    episode = chapter.episodeNumber
-                    posterUrl = detail.cover
-                }
+        val filteredFromUrl = getQueryParam(url, "filtered_title")?.takeIf { it.isNotBlank() }
+        val detail = fetchBookDetail(bookId)
+        val filteredTitle = filteredFromUrl
+            ?: detail?.filteredTitle?.takeIf { it.isNotBlank() }
+
+        val chapterNameById = detail?.chapterBase
+            .orEmpty()
+            .mapNotNull { chapter ->
+                val id = chapter.chapterId ?: return@mapNotNull null
+                id to chapter.chapterName
             }
+            .toMap()
 
-        return newTvSeriesLoadResponse(
-            name = detail.title,
-            url = "$mainUrl/book/${detail.bookId}",
-            type = TvType.AsianDrama,
-            episodes = episodes
-        ) {
-            posterUrl = detail.cover
-            plot = detail.description
+        val episodeItems = fetchEpisodes(bookId, filteredTitle)
+            .filter { (it.episode ?: 0) > 0 }
+            .distinctBy { it.episode to it.chapterId }
+        val episodes = if (episodeItems.isNotEmpty()) {
+            episodeItems
+                .sortedBy { it.episode ?: Int.MAX_VALUE }
+                .mapIndexed { index, episode ->
+                    val number = episode.episode ?: index + 1
+                    newEpisode(
+                        LoadData(
+                            bookId = bookId,
+                            filteredTitle = filteredTitle,
+                            episode = number,
+                            chapterId = episode.chapterId
+                        ).toJsonData()
+                    ) {
+                        name = chapterNameById[episode.chapterId] ?: "Episode $number"
+                        this.episode = number
+                    }
+                }
+        } else {
+            detail?.chapterBase
+                .orEmpty()
+                .mapIndexed { index, chapter ->
+                    val number = index + 1
+                    newEpisode(
+                        LoadData(
+                            bookId = bookId,
+                            filteredTitle = filteredTitle,
+                            episode = number,
+                            chapterId = chapter.chapterId
+                        ).toJsonData()
+                    ) {
+                        name = chapter.chapterName?.takeIf { it.isNotBlank() } ?: "Episode $number"
+                        this.episode = number
+                    }
+                }
+        }
+
+        val title = detail?.bookTitle?.takeIf { it.isNotBlank() }
+            ?: "ReelShort"
+
+        val safeUrl = buildBookUrl(bookId, filteredTitle)
+        return newTvSeriesLoadResponse(title, safeUrl, TvType.AsianDrama, episodes) {
+            posterUrl = detail?.bookPic
+            plot = detail?.specialDesc
         }
     }
 
@@ -91,236 +119,186 @@ class Reelshort : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val payload = parseJson<LoadData>(data)
-        val bookId = payload.bookId ?: return false
-        val episodeNumber = payload.episodeNumber ?: return false
+        val parsed = parseJson<LoadData>(data)
+        val bookId = parsed.bookId ?: return false
+        val episode = parsed.episode ?: return false
+        val filteredTitle = parsed.filteredTitle
+        if (filteredTitle.isNullOrBlank()) return false
 
-        val episodeJson = runCatching {
-            app.get("$mainUrl/api/reelshort/episode?bookId=$bookId&episodeNumber=$episodeNumber").text
-        }.getOrNull() ?: return false
+        val chapterId = parsed.chapterId
+            ?: fetchEpisodes(bookId, filteredTitle)
+                .firstOrNull { it.episode == episode }
+                ?.chapterId
+            ?: return false
 
-        val root = runCatching { JSONObject(episodeJson) }.getOrNull() ?: return false
-        if (!root.optBoolean("success")) return false
-        if (root.optBoolean("isLocked")) return false
+        val url = buildVideoUrl(bookId, episode, filteredTitle, chapterId)
+        val response = tryParseJson<VideoResponse>(app.get(url).text) ?: return false
+        val videoUrl = response.videoUrl?.trim().orEmpty()
+        if (videoUrl.isBlank()) return false
 
-        val videos = root.optJSONArray("videoList")
-        if (videos == null || videos.length() == 0) return false
-
-        val headers = mapOf(
-            "User-Agent" to USER_AGENT,
-            "Accept" to "*/*",
+        callback.invoke(
+            newExtractorLink(
+                source = name,
+                name = "ReelShort",
+                url = videoUrl,
+                type = ExtractorLinkType.M3U8
+            ) {
+                this.quality = Qualities.Unknown.value
+                this.referer = "$mainUrl/"
+            }
         )
 
-        val links = mutableListOf<Pair<String, String>>()
-        for (i in 0 until videos.length()) {
-            val video = videos.optJSONObject(i) ?: continue
-            val streamUrl = video.optStringSafe("url") ?: continue
-            val encode = video.optStringSafe("encode") ?: "Auto"
-            val quality = video.optInt("quality").takeIf { it > 0 }?.toString() ?: "Auto"
-            val label = "$encode $quality"
-            links.add(label to streamUrl)
-        }
-
-        links.distinctBy { it.second }.forEach { (label, streamUrl) ->
-            if (streamUrl.contains(".m3u8", true)) {
-                M3u8Helper.generateM3u8(
-                    source = "$name $label",
-                    streamUrl = streamUrl,
-                    referer = mainUrl,
-                    headers = headers
-                ).forEach(callback)
-            } else {
-                callback(
-                    newExtractorLink(
-                        source = name,
-                        name = "$name $label",
-                        url = streamUrl,
-                        type = ExtractorLinkType.VIDEO
-                    ) {
-                        this.referer = mainUrl
-                        this.headers = headers
-                    }
-                )
-            }
-        }
-
-        return links.isNotEmpty()
+        return true
     }
 
-    private suspend fun fetchItems(path: String): List<BookItem> {
-        val body = runCatching { app.get("$mainUrl$path").text }.getOrNull() ?: return emptyList()
-        return runCatching { parseItems(body) }.getOrDefault(emptyList())
+    private suspend fun fetchShelf(path: String): ShelfResponse? {
+        val url = if (path.startsWith("http", true)) path else "$mainUrl$path"
+        val body = runCatching { app.get(url).text }.getOrNull() ?: return null
+        return tryParseJson<ShelfResponse>(body)
     }
 
-    private fun parseItems(body: String): List<BookItem> {
-        val root = JSONObject(body)
-        val results = mutableListOf<BookItem>()
+    private suspend fun fetchShelfWithFallback(path: String): ShelfResponse? {
+        val primary = fetchShelf(path)
+        if (!primary?.books.isNullOrEmpty()) return primary
 
-        val searchResults = root.optJSONArray("results")
-        if (searchResults != null) {
-            for (i in 0 until searchResults.length()) {
-                val obj = searchResults.optJSONObject(i) ?: continue
-                parseBook(obj)?.let(results::add)
-            }
-            return results
+        if (path.contains("/api/v1/reelshort/recommend", true)) {
+            val fallback = fetchShelf("/api/v1/reelshort/newrelease")
+            if (!fallback?.books.isNullOrEmpty()) return fallback
         }
 
-        val data = root.optJSONObject("data") ?: return emptyList()
-        val lists = data.optJSONArray("lists") ?: return emptyList()
-        for (i in 0 until lists.length()) {
-            val entry = lists.optJSONObject(i) ?: continue
-
-            // foryou format (langsung item buku)
-            if (entry.has("book_id")) {
-                parseBook(entry)?.let(results::add)
-            }
-
-            // homepage format (nested books)
-            appendBooks(results, entry.optJSONArray("books"))
-            appendBooks(results, entry.optJSONArray("book_list"))
-            appendBooks(results, entry.optJSONArray("lists"))
-        }
-        return results
+        return primary
     }
 
-    private fun appendBooks(out: MutableList<BookItem>, books: JSONArray?) {
-        if (books == null) return
-        for (i in 0 until books.length()) {
-            val obj = books.optJSONObject(i) ?: continue
-            parseBook(obj)?.let(out::add)
+    private suspend fun fetchBookDetail(bookId: String): BookItem? {
+        val paths = listOf(
+            "/api/v1/reelshort/dramadub",
+            "/api/v1/reelshort/newrelease",
+            "/api/v1/reelshort/recommend",
+        )
+
+        for (path in paths) {
+            val shelf = fetchShelf(path) ?: continue
+            val item = shelf.books?.firstOrNull { it.bookId == bookId }
+            if (item != null) return item
         }
+
+        return null
     }
 
-    private fun parseBook(obj: JSONObject): BookItem? {
-        val id = obj.optStringSafe("book_id")
-            ?: obj.optStringSafe("bookId")
-            ?: obj.optStringSafe("id")
-            ?: return null
-        val title = obj.optStringSafe("book_title")
-            ?: obj.optStringSafe("title")
-            ?: obj.optStringSafe("name")
-            ?: return null
+    private suspend fun fetchEpisodes(bookId: String, filteredTitle: String?): List<EpisodeItem> {
+        val url = buildEpisodesUrl(bookId, filteredTitle)
+        val body = runCatching { app.get(url).text }.getOrNull() ?: return emptyList()
+        return tryParseJson<EpisodesResponse>(body)?.episodes.orEmpty()
+    }
+
+    private fun buildEpisodesUrl(bookId: String, filteredTitle: String?): String {
+        val suffix = filteredTitle?.takeIf { it.isNotBlank() }?.let { "?filtered_title=$it" }.orEmpty()
+        return "$mainUrl/api/v1/reelshort/episodes/$bookId$suffix"
+    }
+
+    private fun buildVideoUrl(bookId: String, episode: Int, filteredTitle: String, chapterId: String): String {
+        return "$mainUrl/api/v1/reelshort/video/$bookId/$episode?filtered_title=$filteredTitle&chapter_id=$chapterId"
+    }
+
+    private fun BookItem.toSearchResult(): SearchResponse? {
+        val id = bookId ?: return null
+        val title = bookTitle?.trim().orEmpty()
         if (title.isBlank()) return null
 
-        val tags = mutableListOf<String>()
-        tags.addAll(obj.optStringArray("theme"))
-        tags.addAll(obj.optTagList("tag_list"))
-        tags.addAll(obj.optStringArray("tag"))
+        val filtered = filteredTitle?.trim()
+        val url = buildBookUrl(id, filtered)
 
-        return BookItem(
-            id = id,
-            title = title,
-            cover = obj.optStringSafe("book_pic") ?: obj.optStringSafe("cover"),
-            description = obj.optStringSafe("special_desc") ?: obj.optStringSafe("description"),
-            chapterCount = obj.optInt("chapter_count").takeIf { it > 0 }
-                ?: obj.optInt("chapterCount").takeIf { it > 0 },
-            tags = tags.distinct()
-        )
+        return newTvSeriesSearchResponse(title, url, TvType.AsianDrama) {
+            posterUrl = bookPic
+        }
     }
 
-    private suspend fun fetchDetail(bookId: String): DetailData? {
-        val body = runCatching {
-            app.get("$mainUrl/api/reelshort/detail?bookId=$bookId").text
-        }.getOrNull() ?: return null
+    private fun buildBookUrl(bookId: String, filteredTitle: String?): String {
+        val suffix = filteredTitle?.takeIf { it.isNotBlank() }?.let { "?filtered_title=$it" }.orEmpty()
+        return "reelshort://book/$bookId$suffix"
+    }
 
-        val root = runCatching { JSONObject(body) }.getOrNull() ?: return null
-        if (!root.optBoolean("success")) return null
+    private fun encodeQuery(value: String): String {
+        return URLEncoder.encode(value, "UTF-8")
+    }
 
-        val title = root.optStringSafe("title") ?: return null
-        val chapters = mutableListOf<ChapterData>()
-        val arr = root.optJSONArray("chapters")
-        if (arr != null) {
-            for (i in 0 until arr.length()) {
-                val obj = arr.optJSONObject(i) ?: continue
-                val episodeNumber = obj.optInt("index").takeIf { it > 0 } ?: continue
-                chapters.add(
-                    ChapterData(
-                        chapterId = obj.optStringSafe("chapterId"),
-                        title = obj.optStringSafe("title").orEmpty(),
-                        episodeNumber = episodeNumber
-                    )
-                )
-            }
-        }
-
-        return DetailData(
-            bookId = root.optStringSafe("bookId") ?: bookId,
-            title = title,
-            cover = root.optStringSafe("cover"),
-            description = root.optStringSafe("description"),
-            chapters = chapters
-        )
+    private fun getQueryParam(url: String, key: String): String? {
+        val query = url.substringAfter("?", "")
+        if (query.isBlank()) return null
+        return query.split("&")
+            .firstOrNull { it.startsWith("$key=") }
+            ?.substringAfter("=")
     }
 
     private fun extractBookId(url: String): String {
-        val fromQuery = Regex("[?&](?:bookId|id)=([^&]+)").find(url)?.groupValues?.getOrNull(1)
-        if (!fromQuery.isNullOrBlank()) return fromQuery
-        return url.substringAfterLast("/").substringBefore("?")
-    }
-
-    private fun JSONObject.optStringSafe(key: String): String? {
-        val value = optString(key).trim()
-        return value.takeIf { it.isNotBlank() && !it.equals("null", true) }
-    }
-
-    private fun JSONObject.optStringArray(key: String): List<String> {
-        val arr = optJSONArray(key) ?: return emptyList()
-        val out = mutableListOf<String>()
-        for (i in 0 until arr.length()) {
-            val value = arr.optString(i).trim()
-            if (value.isNotBlank() && !value.equals("null", true)) out.add(value)
-        }
-        return out
-    }
-
-    private fun JSONObject.optTagList(key: String): List<String> {
-        val arr = optJSONArray(key) ?: return emptyList()
-        val out = mutableListOf<String>()
-        for (i in 0 until arr.length()) {
-            val tag = arr.optJSONObject(i)
-            val value = tag?.optStringSafe("tag_name") ?: arr.optString(i).trim()
-            if (value.isNotBlank() && !value.equals("null", true)) out.add(value)
-        }
-        return out
-    }
-
-    private fun BookItem.toSearchResponse(): SearchResponse? {
-        if (title.isBlank()) return null
-        return newTvSeriesSearchResponse(
-            title,
-            "$mainUrl/book/$id",
-            TvType.AsianDrama
-        ) {
-            posterUrl = cover
+        return url.substringAfter("/book/").substringBefore("?").ifBlank {
+            url.substringAfter("reelshort://").substringBefore("?").substringBefore("/")
+        }.ifBlank {
+            url.substringAfterLast("/").substringBefore("?")
         }
     }
 
-    data class LoadData(
-        val bookId: String? = null,
-        val chapterId: String? = null,
-        val episodeNumber: Int? = null,
+    private fun LoadData.toJsonData(): String = this.toJson()
+
+    private fun buildBaseUrl(): String {
+        val codes = intArrayOf(
+            104, 116, 116, 112, 115, 58, 47, 47,
+            114, 101, 101, 108, 115, 104, 111, 114, 116,
+            46, 100, 114, 97, 109, 97, 118, 105, 101, 119,
+            46, 119, 101, 98, 46, 105, 100
+        )
+        val sb = StringBuilder()
+        for (code in codes) sb.append(code.toChar())
+        return sb.toString()
+    }
+
+    data class ShelfResponse(
+        @JsonProperty("bookshelf_name") val shelfName: String? = null,
+        @JsonProperty("books") val books: List<BookItem>? = null,
+    )
+
+    data class SearchWrapper(
+        @JsonProperty("results") val results: List<BookItem>? = null,
     )
 
     data class BookItem(
-        val id: String,
-        val title: String,
-        val cover: String?,
-        val description: String?,
-        val chapterCount: Int?,
-        val tags: List<String>,
+        @JsonProperty("book_id") val bookId: String? = null,
+        @JsonProperty("book_title") val bookTitle: String? = null,
+        @JsonProperty("filtered_title") val filteredTitle: String? = null,
+        @JsonProperty("book_pic") val bookPic: String? = null,
+        @JsonProperty("special_desc") val specialDesc: String? = null,
+        @JsonProperty("chapter_count") val chapterCount: Int? = null,
+        @JsonProperty("chapter_base") val chapterBase: List<ChapterBase>? = null,
     )
 
-    data class DetailData(
-        val bookId: String,
-        val title: String,
-        val cover: String?,
-        val description: String?,
-        val chapters: List<ChapterData>,
+    data class ChapterBase(
+        @JsonProperty("chapter_id") val chapterId: String? = null,
+        @JsonProperty("chapter_name") val chapterName: String? = null,
+        @JsonProperty("like_count") val likeCount: Int? = null,
+        @JsonProperty("publish_at") val publishAt: String? = null,
+        @JsonProperty("create_time") val createTime: String? = null,
     )
 
-    data class ChapterData(
-        val chapterId: String?,
-        val title: String,
-        val episodeNumber: Int,
+    data class EpisodesResponse(
+        @JsonProperty("episodes") val episodes: List<EpisodeItem>? = null,
+    )
+
+    data class EpisodeItem(
+        @JsonProperty("episode") val episode: Int? = null,
+        @JsonProperty("chapter_id") val chapterId: String? = null,
+    )
+
+    data class VideoResponse(
+        @JsonProperty("video_url") val videoUrl: String? = null,
+        @JsonProperty("episode") val episode: Int? = null,
+        @JsonProperty("duration") val duration: Int? = null,
+        @JsonProperty("next_episode") val nextEpisode: EpisodeItem? = null,
+    )
+
+    data class LoadData(
+        @JsonProperty("bookId") val bookId: String? = null,
+        @JsonProperty("filteredTitle") val filteredTitle: String? = null,
+        @JsonProperty("episode") val episode: Int? = null,
+        @JsonProperty("chapterId") val chapterId: String? = null,
     )
 }

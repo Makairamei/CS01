@@ -1,13 +1,9 @@
-// use an integer for version numbers
-version = 5
-
+version = 2
 
 cloudstream {
+    description = "Anoboy"
     language = "id"
-    // All of these properties are optional, you can safely remove them
-
-    // description = "Lorem Ipsum"
-    authors = listOf("Hexated")
+    authors = listOf("Duro92")
 
     /**
      * Status int as the following:
@@ -19,12 +15,9 @@ cloudstream {
     status = 1 // will be 3 if unspecified
     tvTypes = listOf(
         "AnimeMovie",
-        "Anime",
         "OVA",
+        "Anime",
     )
 
-
-    iconUrl = "https://icons.duckduckgo.com/ip3/ww3.anoboy.app.ico"
-
-    isCrossPlatform = true
+    iconUrl = "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://anoboy.be&size=%size%"
 }
