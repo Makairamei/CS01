@@ -13,8 +13,14 @@ class BloggerExtractor : ExtractorApi() {
     override val name = "Blogger"
     override val mainUrl = "https://www.blogger.com"
     override val requiresReferer = true
+    private val googleVideoReferer = "https://youtube.googleapis.com/"
 
     private val rpcId = "WcwnYd"
+
+    data class ResolvedVideo(
+        val url: String,
+        val quality: Int
+    )
 
     override suspend fun getUrl(
         url: String,
@@ -23,40 +29,77 @@ class BloggerExtractor : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val fixedUrl = if (url.startsWith("//")) "https:$url" else url
-
-        if (fixedUrl.contains("blogger.googleusercontent.com", true)) {
+        val resolvedVideos = extractDirectVideos(fixedUrl, referer)
+        for (video in resolvedVideos) {
+            val directReferer = if (video.url.contains("googlevideo.com/", true)) {
+                googleVideoReferer
+            } else {
+                fixedUrl
+            }
             callback.invoke(
                 newExtractorLink(
                     this.name,
                     this.name,
-                    fixedUrl,
+                    video.url,
                     INFER_TYPE
                 ) {
-                    this.referer = referer ?: "$mainUrl/"
+                    this.referer = directReferer
+                    this.headers = mapOf(
+                        "Referer" to directReferer,
+                        "User-Agent" to USER_AGENT,
+                        "Accept" to "*/*"
+                    )
+                    this.quality = video.quality
                 }
             )
-            return
+        }
+    }
+
+    suspend fun extractDirectVideos(url: String, referer: String?): List<ResolvedVideo> {
+        val fixedUrl = if (url.startsWith("//")) "https:$url" else url
+
+        if (fixedUrl.contains("blogger.googleusercontent.com", true)) {
+            return listOf(
+                ResolvedVideo(
+                    fixedUrl,
+                    itagToQuality(
+                        Regex("[?&]itag=(\\d+)")
+                            .find(fixedUrl)
+                            ?.groupValues
+                            ?.getOrNull(1)
+                            ?.toIntOrNull()
+                    )
+                )
+            )
         }
 
         val token = Regex("[?&]token=([^&]+)")
             .find(fixedUrl)
             ?.groupValues
             ?.getOrNull(1)
-            ?: return
+            ?: return emptyList()
 
-        val page = app.get(fixedUrl, referer = referer ?: "$mainUrl/")
+        val page = app.get(
+            fixedUrl,
+            referer = referer ?: "$mainUrl/",
+            headers = mapOf(
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "User-Agent" to USER_AGENT
+            )
+        )
         val html = page.text
+        val cookies = page.cookies
 
-        val fSid = Regex("FdrFJe\":\"(\\d+)\"")
+        val fSid = Regex("FdrFJe\":\"(-?\\d+)\"")
             .find(html)
             ?.groupValues
             ?.getOrNull(1)
-            ?: return
+            ?: ""
         val bl = Regex("cfb2h\":\"([^\"]+)\"")
             .find(html)
             ?.groupValues
             ?.getOrNull(1)
-            ?: return
+            ?: return emptyList()
         val hl = Regex("lang=\"([^\"]+)\"")
             .find(html)
             ?.groupValues
@@ -73,53 +116,68 @@ class BloggerExtractor : ExtractorApi() {
             apiUrl,
             data = mapOf("f.req" to payload),
             referer = fixedUrl,
+            cookies = cookies,
             headers = mapOf(
                 "Origin" to mainUrl,
+                "Accept" to "*/*",
                 "Content-Type" to "application/x-www-form-urlencoded;charset=UTF-8",
+                "X-Same-Domain" to "1",
                 "User-Agent" to USER_AGENT
             )
         ).text
 
-        val decoded = decodeUnicodeEscapes(response)
-        val urls = Regex("""https://[^\s"']+""")
-            .findAll(decoded)
+        return Regex("""https://[^\s"']+""")
+            .findAll(decodeUnicodeEscapes(response))
             .map { it.value }
+            .plus(
+                Regex("""https://[^\s"']+""")
+                    .findAll(response)
+                    .map { it.value }
+            )
+            .map { normalizeVideoUrl(it) }
             .filter {
                 it.contains("googlevideo.com/videoplayback") ||
                     it.contains("blogger.googleusercontent.com")
             }
             .distinct()
-            .toList()
-
-        for (videoUrl in urls) {
-            val itag = Regex("[?&]itag=(\\d+)")
-                .find(videoUrl)
-                ?.groupValues
-                ?.getOrNull(1)
-                ?.toIntOrNull()
-            callback.invoke(
-                newExtractorLink(
-                    this.name,
-                    this.name,
+            .map { videoUrl ->
+                ResolvedVideo(
                     videoUrl,
-                    INFER_TYPE
-                ) {
-                    this.referer = "$mainUrl/"
-                    this.quality = itagToQuality(itag)
-                }
-            )
-        }
+                    itagToQuality(
+                        Regex("[?&]itag=(\\d+)")
+                            .find(videoUrl)
+                            ?.groupValues
+                            ?.getOrNull(1)
+                            ?.toIntOrNull()
+                    )
+                )
+            }
+            .toList()
     }
 
     private fun decodeUnicodeEscapes(input: String): String {
-        val unicodeRegex = Regex("""\\\\u([0-9a-fA-F]{4})""")
-        var output = unicodeRegex.replace(input) { match ->
-            match.groupValues[1].toInt(16).toChar().toString()
+        val unicodeRegex = Regex("""\\u([0-9a-fA-F]{4})""")
+        var output = input
+        repeat(2) {
+            output = unicodeRegex.replace(output) { match ->
+                match.groupValues[1].toInt(16).toChar().toString()
+            }
         }
         output = output.replace("\\/", "/")
+        output = output.replace("\\=", "=")
+        output = output.replace("\\&", "&")
         output = output.replace("\\\\", "\\")
         output = output.replace("\\\"", "\"")
         return output
+    }
+
+    private fun normalizeVideoUrl(input: String): String {
+        return decodeUnicodeEscapes(input)
+            .replace("\\u003d", "=")
+            .replace("\\u0026", "&")
+            .replace("\\u002F", "/")
+            .replace("\\/", "/")
+            .replace("\\", "")
     }
 
     private fun itagToQuality(itag: Int?): Int {

@@ -2,6 +2,7 @@ package com.MovieBox
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.util.Log
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.lagradost.cloudstream3.Actor
@@ -17,6 +18,7 @@ import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.SearchResponse
+import com.lagradost.cloudstream3.SearchResponseList
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.addDate
@@ -30,8 +32,10 @@ import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieLoadResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
+import com.lagradost.cloudstream3.newSearchResponseList
 import com.lagradost.cloudstream3.newSubtitleFile
 import com.lagradost.cloudstream3.newTvSeriesLoadResponse
+import com.lagradost.cloudstream3.toNewSearchResponseList
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.INFER_TYPE
@@ -50,7 +54,7 @@ class MovieBoxProvider : MainAPI() {
     override var mainUrl = "https://api3.aoneroom.com"
     override var name = "Moviebox📦"
     override val hasMainPage = true
-    override var lang = "id"
+    override var lang = "hi"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     private val secretKeyDefault = base64Decode("NzZpUmwwN3MweFNOOWpxbUVXQXQ3OUVCSlp1bElRSXNWNjRGWnIyTw==")
@@ -239,9 +243,9 @@ class MovieBoxProvider : MainAPI() {
 
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
+    override suspend fun search(query: String,page: Int): SearchResponseList {
         val url = "$mainUrl/wefeed-mobile-bff/subject-api/search/v2"
-        val jsonBody = """{"page": 1, "perPage": 10, "keyword": "$query"}"""
+        val jsonBody = """{"page": $page, "perPage": 20, "keyword": "$query"}"""
         val xClientToken = generateXClientToken()
         val xTrSignature = generateXTrSignature("POST", "application/json", "application/json; charset=utf-8", url, jsonBody)
         val headers = mapOf(
@@ -264,7 +268,7 @@ class MovieBoxProvider : MainAPI() {
         val responseBody = response.body.string()
         val mapper = jacksonObjectMapper()
         val root = mapper.readTree(responseBody)
-        val results = root["data"]?.get("results") ?: return emptyList()
+        val results = root.get("data")?.get("results") ?: return newSearchResponseList(emptyList())
         val searchList = mutableListOf<SearchResponse>()
         for (result in results) {
             val subjects = result["subjects"] ?: continue
@@ -290,7 +294,7 @@ class MovieBoxProvider : MainAPI() {
             )
             }
         }
-        return searchList
+        return searchList.toNewSearchResponseList()
     }
 
     override suspend fun load(url: String): LoadResponse {
@@ -395,7 +399,7 @@ class MovieBoxProvider : MainAPI() {
 
         val Poster = meta?.get("poster")?.asText() ?: coverUrl
         val Background = meta?.get("background")?.asText() ?: backgroundUrl
-        val Description = meta?.get("description")?.asText() ?: description
+        val Description = meta?.get("overview")?.asText() ?: description
         val IMDBRating = meta?.get("imdbRating")?.asText()
 
         if (type == TvType.TvSeries) {
@@ -424,11 +428,11 @@ class MovieBoxProvider : MainAPI() {
                             it["season"]?.asInt() == seasonNumber &&
                                     it["episode"]?.asInt() == episodeNumber
                         }
-                        val epName = epMeta?.get("name")?.asText()?.takeIf { it.isNotBlank() } ?: "S${seasonNumber}E${episodeNumber}"
+                        val epName = epMeta?.get("name")?.asText()?: epMeta?.get("title")?.asText() ?.takeIf { it.isNotBlank() } ?: "S${seasonNumber}E${episodeNumber}"
                         val epDesc = epMeta?.get("overview")?.asText() ?: epMeta?.get("description")?.asText() ?: "Season $seasonNumber Episode $episodeNumber"
                         val epThumb = epMeta?.get("thumbnail")?.asText()?.takeIf { it.isNotBlank() } ?: coverUrl
-
-                        val aired = epMeta?.get("firstAired")?.asText()?.takeIf { it.isNotBlank() } ?: ""
+                        val runtime = epMeta?.get("runtime")?.asText()?.filter { it.isDigit() }?.toIntOrNull()
+                        val aired = epMeta?.get("released")?.asText()?.takeIf { it.isNotBlank() } ?: ""
 
                         episodes.add(
                             newEpisode("$id|$seasonNumber|$episodeNumber") {
@@ -437,6 +441,7 @@ class MovieBoxProvider : MainAPI() {
                                 this.episode = episodeNumber
                                 this.posterUrl = epThumb
                                 this.description = epDesc
+                                this.runTime = runtime
                                 addDate(aired)
                             }
                         )
@@ -457,7 +462,7 @@ class MovieBoxProvider : MainAPI() {
 
             return newTvSeriesLoadResponse(title, finalUrl, type, episodes) {
                 this.posterUrl =  coverUrl ?: Poster
-                this.backgroundPosterUrl = Background ?: backgroundUrl
+                this.backgroundPosterUrl = Background ?: backgroundUrl ?: Poster
                 try { this.logoUrl = logoUrl } catch(_:Throwable){}
                 this.plot = Description ?: description
                 this.year = year
@@ -492,6 +497,7 @@ class MovieBoxProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        Log.d("Phisher",data)
         try {
             val parts = data.split("|")
             val originalSubjectId = when {
@@ -546,6 +552,7 @@ class MovieBoxProvider : MainAPI() {
                     }
                 }
             }
+
             
             // Always add the original subject ID first as the default source with proper language name
             subjectIds.add(0, Pair(originalSubjectId, originalLanguageName))
@@ -590,8 +597,8 @@ class MovieBoxProvider : MainAPI() {
                                 val quality = getHighestQuality(resolutions)
                                 callback.invoke(
                                     newExtractorLink(
-                                        source = "$name $language",
-                                        name = "$name ($language)",
+                                        source = "$name ${language.replace("dub","Audio")}",
+                                        name = "$name (${language.replace("dub","Audio")})",
                                         url = streamUrl,
                                         type = when {
                                             streamUrl.startsWith("magnet:", ignoreCase = true) -> ExtractorLinkType.MAGNET
@@ -636,7 +643,7 @@ class MovieBoxProvider : MainAPI() {
                                         subtitleCallback.invoke(
                                             newSubtitleFile(
                                                 url = captionUrl,
-                                                lang = "$lang ($language)"
+                                                lang = "$lang (${language.replace("dub","Audio")})"
                                             )
                                         )
                                     }
@@ -668,14 +675,59 @@ class MovieBoxProvider : MainAPI() {
                                         subtitleCallback.invoke(
                                             newSubtitleFile(
                                                 url = captionUrl,
-                                                lang = "$lang ($language)"
+                                                lang = "$lang (${language.replace("dub","Audio")})"
                                             )
                                         )
                                     }
                                 }
-
-
                                 //hasAnyLinks = true
+                            }
+                        }
+
+
+                        //Ep Miss Match Fix (SplitsVilla used to test)
+                        if (streams == null || !streams.isArray || streams.size() == 0) {
+
+                            val fallbackUrl = "$mainUrl/wefeed-mobile-bff/subject-api/get?subjectId=$subjectId"
+
+                            val fallbackHeaders = headers.toMutableMap().apply {
+                                put("x-tr-signature", generateXTrSignature(
+                                    "GET",
+                                    "application/json",
+                                    "application/json",
+                                    fallbackUrl
+                                ))
+                            }
+
+                            val fallbackResponse = app.get(fallbackUrl, headers = fallbackHeaders)
+
+                            if (fallbackResponse.code == 200) {
+
+                                val fallbackRoot = mapper.readTree(fallbackResponse.body.string())
+                                val detectors = fallbackRoot["data"]?.get("resourceDetectors")
+
+                                detectors?.forEach { detector ->
+
+                                    detector["resolutionList"]?.forEach { video ->
+
+                                        val link = video["resourceLink"]?.asText() ?: return@forEach
+                                        val quality = video["resolution"]?.asInt() ?: 0
+                                        val se = video["se"]?.asInt()
+                                        val ep = video["ep"]?.asInt()
+
+                                        callback.invoke(
+                                            newExtractorLink(
+                                                source = "$name ${language.replace("dub","Audio")}",
+                                                name = "$name S${se}E${ep} ${quality}p (${language.replace("dub","Audio")})",
+                                                url = link,
+                                                type = ExtractorLinkType.VIDEO
+                                            ) {
+                                                this.headers = mapOf("Referer" to mainUrl)
+                                                this.quality = quality
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -711,44 +763,21 @@ fun getHighestQuality(input: String): Int? {
     return null
 }
 
+
+private fun cleanTitle(s: String): String {
+    return s.lowercase()
+        .replace("[^a-z0-9 ]".toRegex(), " ")
+        .replace("\\s+".toRegex(), " ")
+        .trim()
+}
 private suspend fun identifyID(
     title: String,
     year: Int?,
     imdbRatingValue: Double?
 ): Pair<Int?, String?> {
     val normTitle = normalize(title)
-
-    // try multi -> tv -> movie (with year)
-    val tryOrder = listOf("multi", "tv", "movie")
-    for (type in tryOrder) {
-        val res = searchAndPick(normTitle, year, imdbRatingValue)
-        if (res.first != null) return res
-    }
-
-    // retry without year (often helpful for dubbed/localized titles)
-    if (year != null) {
-        for (type in tryOrder) {
-            val res = searchAndPick(normTitle, null, imdbRatingValue)
-            if (res.first != null) return res
-        }
-    }
-
-    val stripped = normTitle
-        .replace("\\b(hindi|tamil|telugu|dub|dubbed|dubbed audio|dual audio|dubbed version)\\b".toRegex(RegexOption.IGNORE_CASE), " ")
-        .replace("\\s+".toRegex(), " ")
-        .trim()
-    if (stripped.isNotBlank() && stripped != normTitle) {
-        for (type in tryOrder) {
-            val res = searchAndPick(stripped, year, imdbRatingValue)
-            if (res.first != null) return res
-        }
-        if (year != null) {
-            for (type in tryOrder) {
-                val res = searchAndPick(stripped, null, imdbRatingValue)
-                if (res.first != null) return res
-            }
-        }
-    }
+    val res = searchAndPick(normTitle, year, imdbRatingValue)
+    if (res.first != null) return res
 
     return Pair(null, null)
 }
@@ -795,11 +824,12 @@ private suspend fun searchAndPick(
             val candidateId = o.optInt("id", -1)
             if (candidateId == -1) continue
 
-            val candTitle = when (mediaType) {
-                "tv" -> listOf(o.optString("name", ""), o.optString("original_name", "")).firstOrNull { it.isNotBlank() }?.lowercase() ?: ""
-                "movie" -> listOf(o.optString("title", ""), o.optString("original_title", "")).firstOrNull { it.isNotBlank() }?.lowercase() ?: ""
-                else -> listOf(o.optString("title", ""), o.optString("name", ""), o.optString("original_title", ""), o.optString("original_name", "")).firstOrNull { it.isNotBlank() }?.lowercase() ?: ""
-            }
+            val titles = listOf(
+                o.optString("title"),
+                o.optString("name"),
+                o.optString("original_title"),
+                o.optString("original_name")
+            ).filter { it.isNotBlank() }
 
             val candDate = when (mediaType) {
                 "tv" -> o.optString("first_air_date", "")
@@ -810,8 +840,23 @@ private suspend fun searchAndPick(
 
             // scoring
             var score = 0.0
-            if (tokenEquals(candTitle, normTitle)) score += 50.0
-            else if (candTitle.contains(normTitle) || normTitle.contains(candTitle)) score += 15.0
+            val normClean = cleanTitle(normTitle)
+
+            var titleScore = 0.0
+            for (t in titles) {
+                val candClean = cleanTitle(t)
+
+                if (tokenEquals(candClean, normClean)) {
+                    titleScore = 50.0
+                    break
+                }
+
+                if (candClean.contains(normClean) || normClean.contains(candClean)) {
+                    titleScore = maxOf(titleScore, 20.0)
+                }
+            }
+            score += titleScore
+
 
             if (candYear != null && year != null && candYear == year) score += 35.0
 
@@ -828,8 +873,6 @@ private suspend fun searchAndPick(
                 bestIsTv = (mediaType == "tv")
             }
         }
-
-        if (bestScore >= 45) break
     }
 
     if (bestId == null || bestScore < 40.0) return Pair(null, null)
@@ -868,7 +911,7 @@ private suspend fun fetchMetaData(imdbId: String?, type: TvType): JsonNode? {
     if (imdbId.isNullOrBlank()) return null
 
     val metaType = if (type == TvType.TvSeries) "series" else "movie"
-    val url = "https://aiometadata.elfhosted.com/stremio/b7cb164b-074b-41d5-b458-b3a834e197bb/meta/$metaType/$imdbId.json"
+    val url = "https://v3-cinemeta.strem.io/meta/$metaType/$imdbId.json"
 
     return try {
         val resp = app.get(url).text
@@ -885,53 +928,69 @@ suspend fun fetchTmdbLogoUrl(
     tmdbId: Int?,
     appLangCode: String?
 ): String? {
+
     if (tmdbId == null) return null
 
-    val appLang = appLangCode?.substringBefore("-")?.lowercase()
-    val url = if (type == TvType.Movie) {
+    val url = if (type == TvType.Movie)
         "$tmdbAPI/movie/$tmdbId/images?api_key=$apiKey"
-    } else {
+    else
         "$tmdbAPI/tv/$tmdbId/images?api_key=$apiKey"
-    }
 
     val json = runCatching { JSONObject(app.get(url).text) }.getOrNull() ?: return null
     val logos = json.optJSONArray("logos") ?: return null
     if (logos.length() == 0) return null
 
-    fun logoUrlAt(i: Int): String = "https://image.tmdb.org/t/p/w500${logos.getJSONObject(i).optString("file_path")}"
-    fun isSvg(i: Int): Boolean = logos.getJSONObject(i).optString("file_path").endsWith(".svg", ignoreCase = true)
+    val lang = appLangCode?.trim()?.lowercase()
 
-    if (!appLang.isNullOrBlank()) {
-        var svgFallback: String? = null
-        for (i in 0 until logos.length()) {
-            val logo = logos.optJSONObject(i) ?: continue
-            if (logo.optString("iso_639_1") == appLang) {
-                if (isSvg(i)) {
-                    if (svgFallback == null) svgFallback = logoUrlAt(i)
-                } else {
-                    return logoUrlAt(i)
-                }
-            }
-        }
-        if (svgFallback != null) return svgFallback
-    }
+    fun path(o: JSONObject) = o.optString("file_path")
+    fun isSvg(o: JSONObject) = path(o).endsWith(".svg", true)
+    fun urlOf(o: JSONObject) = "https://image.tmdb.org/t/p/w500${path(o)}"
 
-    var enSvgFallback: String? = null
+    // Language match
+    var svgFallback: JSONObject? = null
+
     for (i in 0 until logos.length()) {
         val logo = logos.optJSONObject(i) ?: continue
-        if (logo.optString("iso_639_1") == "en") {
-            if (isSvg(i)) {
-                if (enSvgFallback == null) enSvgFallback = logoUrlAt(i)
-            } else {
-                return logoUrlAt(i)
-            }
+        val p = path(logo)
+        if (p.isBlank()) continue
+
+        val l = logo.optString("iso_639_1").trim().lowercase()
+        if (l == lang) {
+            if (!isSvg(logo)) return urlOf(logo)
+            if (svgFallback == null) svgFallback = logo
         }
     }
-    if (enSvgFallback != null) return enSvgFallback
+    svgFallback?.let { return urlOf(it) }
 
-    for (i in 0 until logos.length()) {
-        if (!isSvg(i)) return logoUrlAt(i)
+    // Highest voted fallback
+    var best: JSONObject? = null
+    var bestSvg: JSONObject? = null
+
+    fun voted(o: JSONObject) = o.optDouble("vote_average", 0.0) > 0 && o.optInt("vote_count", 0) > 0
+
+    fun better(a: JSONObject?, b: JSONObject): Boolean {
+        if (a == null) return true
+        val aAvg = a.optDouble("vote_average", 0.0)
+        val aCnt = a.optInt("vote_count", 0)
+        val bAvg = b.optDouble("vote_average", 0.0)
+        val bCnt = b.optInt("vote_count", 0)
+        return bAvg > aAvg || (bAvg == aAvg && bCnt > aCnt)
     }
 
-    return logoUrlAt(0)
+    for (i in 0 until logos.length()) {
+        val logo = logos.optJSONObject(i) ?: continue
+        if (!voted(logo)) continue
+
+        if (isSvg(logo)) {
+            if (better(bestSvg, logo)) bestSvg = logo
+        } else {
+            if (better(best, logo)) best = logo
+        }
+    }
+
+    best?.let { return urlOf(it) }
+    bestSvg?.let { return urlOf(it) }
+
+    // No language match & no voted logos
+    return null
 }

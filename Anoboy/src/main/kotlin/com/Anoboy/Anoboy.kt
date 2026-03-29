@@ -44,6 +44,16 @@ class Anoboy : MainAPI() {
     override val mainPage = mainPageOf(
         "anime/" to "Baru Ditambahkan",
         "anime/ongoing/" to "Ongoing",
+        "action/" to "Action",
+        "adventure/" to "Adventure",
+        "comedy/" to "Comedy",
+        "drama/" to "Drama",
+        "fantasy/" to "Fantasy",
+        "horror/" to "Horror",
+        "mystery/" to "Mystery",
+        "romance/" to "Romance",
+        "sports/" to "Sports",
+        "thriller/" to "Thriller",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -208,23 +218,43 @@ class Anoboy : MainAPI() {
         }
 
         fun filterStreamingIfAvailable(elements: List<Element>): List<Element> {
-            val hasStreamingOrDownload = elements.any { anchor ->
+            val hasStreaming = elements.any { anchor ->
                 val text = anchor.text()
                 val href = anchor.attr("href")
                 text.contains("streaming", true) ||
-                    text.contains("download", true) ||
-                    href.contains("streaming", true) ||
-                    href.contains("download", true)
+                    href.contains("streaming", true)
             }
-            return if (hasStreamingOrDownload) {
-                elements.filter { anchor ->
+
+            if (hasStreaming) {
+                return elements.filter { anchor ->
                     val text = anchor.text()
                     val href = anchor.attr("href")
                     text.contains("streaming", true) || href.contains("streaming", true)
                 }
-            } else {
-                elements
             }
+
+            val hasDownload = elements.any { anchor ->
+                val text = anchor.text()
+                val href = anchor.attr("href")
+                text.contains("download", true) ||
+                    href.contains("download", true) ||
+                    href.contains("/download/", true)
+            }
+
+            if (hasDownload) {
+                val nonDownloadElements = elements.filterNot { anchor ->
+                    val text = anchor.text()
+                    val href = anchor.attr("href")
+                    text.contains("download", true) ||
+                        href.contains("download", true) ||
+                        href.contains("/download/", true)
+                }
+                if (nonDownloadElements.isNotEmpty()) {
+                    return nonDownloadElements
+                }
+            }
+
+            return elements
         }
 
         val seasonGroups = buildList {
@@ -292,11 +322,82 @@ class Anoboy : MainAPI() {
                 !clean.startsWith("javascript", true)
         }
 
-        fun buildServerEpisodes(doc: org.jsoup.nodes.Document): List<Episode> {
+        fun parseEpisodeNumber(rawTitle: String, sourceUrl: String?): Int? {
+            val fromTitle = Regex("\\b(?:episode|ep)\\s*[-:]?\\s*(\\d+)\\b", RegexOption.IGNORE_CASE)
+                .find(rawTitle)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+            if (fromTitle != null) return fromTitle
+
+            val fromBtHd = Regex("\\bbt\\s*-?\\s*hd\\s*[-:]?\\s*(\\d+)\\b", RegexOption.IGNORE_CASE)
+                .find(rawTitle)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+            if (fromBtHd != null) return fromBtHd
+
+            val fromData = sourceUrl?.let { link ->
+                Regex("[?&](?:data5|ep|episode)=(\\d+)", RegexOption.IGNORE_CASE)
+                    .find(link)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
+            }
+            if (fromData != null) return fromData
+
+            return null
+        }
+
+        fun isQualityOnlyLabel(rawTitle: String): Boolean {
+            val label = rawTitle.trim()
+            if (label.isBlank()) return false
+            if (Regex("\\b(?:episode|ep|ova|special)\\b", RegexOption.IGNORE_CASE).containsMatchIn(label)) {
+                return false
+            }
+            if (Regex("\\bbt\\s*-?\\s*hd\\b", RegexOption.IGNORE_CASE).containsMatchIn(label)) {
+                return false
+            }
+            return Regex("\\b(?:\\d{3,4}p?|240|360|480|720|1080|1k|2k|4k)\\b", RegexOption.IGNORE_CASE)
+                .containsMatchIn(label) ||
+                Regex("\\bpc\\s*\\d+\\b", RegexOption.IGNORE_CASE).containsMatchIn(label) ||
+                Regex("\\b\\d+\\s*-\\s*\\d+\\b").containsMatchIn(label)
+        }
+
+        val episodeNumberFromUrl = Regex("(?:episode|ep)[-\\s]?(\\d+)", RegexOption.IGNORE_CASE)
+            .find(url)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+            ?: Regex("\\b(?:episode|ep)\\s*(\\d+)\\b", RegexOption.IGNORE_CASE)
+                .find(title)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+
+        fun encodeEpisodeData(referer: String?, payload: String): String {
+            if (referer.isNullOrBlank()) return payload
+            return "anoboyref::$referer:::$payload"
+        }
+
+        fun buildServerEpisodes(
+            doc: org.jsoup.nodes.Document,
+            pageReferer: String = url
+        ): List<Episode> {
             val serverGroups = doc.select("div.satu, div.dua, div.tiga, div.empat, div.lima, div.enam")
             val anchors = serverGroups.flatMap { group -> group.select("a[data-video]") }
             val fallbackAnchors = if (anchors.isNotEmpty()) anchors else doc.select("a[data-video]")
             if (fallbackAnchors.isEmpty()) return emptyList()
+
+            val hasExplicitEpisodeLabels = fallbackAnchors.any { anchor ->
+                val rawTitle = anchor.text().trim()
+                val sourceUrl = anchor.attr("data-video").ifBlank { anchor.attr("href") }
+                parseEpisodeNumber(rawTitle, sourceUrl) != null
+            }
+            val qualityLikeCount = fallbackAnchors.count { isQualityOnlyLabel(it.text()) }
+            val shouldCollapseToSingleEpisode = episodeNumberFromUrl != null &&
+                !hasExplicitEpisodeLabels &&
+                qualityLikeCount >= (fallbackAnchors.size - 1).coerceAtLeast(1)
 
             val episodesByNumber = LinkedHashMap<Int, MutableList<Pair<String, String>>>()
             fallbackAnchors.forEachIndexed { index, anchor ->
@@ -304,14 +405,17 @@ class Anoboy : MainAPI() {
                 if (!isValidEpisodeUrl(dataVideo)) return@forEachIndexed
 
                 val rawTitle = anchor.text().trim()
-                val episodeNumber = Regex("(\\d+)")
-                    .find(rawTitle)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toIntOrNull()
-                    ?: (index + 1)
+                val episodeNumber = when {
+                    shouldCollapseToSingleEpisode -> episodeNumberFromUrl
+                    else -> parseEpisodeNumber(rawTitle, dataVideo)
+                        ?: if (isQualityOnlyLabel(rawTitle) && episodeNumberFromUrl != null && fallbackAnchors.size <= 6) {
+                            episodeNumberFromUrl
+                        } else {
+                            index + 1
+                        }
+                }
                 val resolvedUrl = fixUrl(dataVideo)
-                val cleanedTitle = normalizeTitle(rawTitle)
+                val cleanedTitle = if (shouldCollapseToSingleEpisode) "" else normalizeTitle(rawTitle)
 
                 episodesByNumber
                     .getOrPut(episodeNumber) { mutableListOf() }
@@ -330,16 +434,88 @@ class Anoboy : MainAPI() {
                         "multi::" + urls.joinToString("||")
                     }
 
-                    newEpisode(data) {
+                    newEpisode(encodeEpisodeData(pageReferer, data)) {
                         name = title
                         episode = episodeNumber
                     }
                 }
         }
 
-        val serverEpisodes = buildServerEpisodes(document)
+        fun buildEpisodesFromAnchors(
+            elements: List<Element>,
+            seasonNum: Int? = null
+        ): List<Episode> {
+            return elements
+                .mapIndexed { index, aTag ->
+                    val href = fixUrl(aTag.attr("href"))
+                    val rawTitle = aTag.text().trim()
+                    val cleanedTitle = normalizeTitle(rawTitle)
+                    val episodeNumber = Regex("Episode\\s*(\\d+)", RegexOption.IGNORE_CASE)
+                        .find(rawTitle)
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toIntOrNull()
+                        ?: Regex("episode[-\\s]?(\\d+)", RegexOption.IGNORE_CASE)
+                            .find(href)
+                            ?.groupValues
+                            ?.getOrNull(1)
+                            ?.toIntOrNull()
+                        ?: if (seasonNum != null && !rawTitle.contains("Episode", true)) 1 else (index + 1)
+
+                    newEpisode(href) {
+                        name = if (cleanedTitle.isBlank()) "Episode $episodeNumber" else cleanedTitle
+                        episode = episodeNumber
+                        if (seasonNum != null) this.season = seasonNum
+                    }
+                }
+        }
+
+        suspend fun fetchNestedEpisodePage(href: String): org.jsoup.nodes.Document? {
+            val referers = listOf(url, mainUrl, null).distinct()
+            for (referer in referers) {
+                val nested = runCatching {
+                    if (referer != null) app.get(href, referer = referer).document else app.get(href).document
+                }.getOrNull()
+                if (nested != null) return nested
+            }
+            return null
+        }
+
+        suspend fun buildNestedEpisodesFromStreamingLink(href: String): List<Episode> {
+            val nestedDocument = fetchNestedEpisodePage(href) ?: return emptyList()
+
+            val serverEpisodesFromNested = buildServerEpisodes(nestedDocument, href)
+            if (serverEpisodesFromNested.isNotEmpty()) return serverEpisodesFromNested
+
+            val nestedEpisodeAnchors = nestedDocument.select("div.singlelink ul.lcp_catlist li a, div.eplister ul li a")
+            val filteredNestedAnchors = filterStreamingIfAvailable(nestedEpisodeAnchors.toList())
+            return if (filteredNestedAnchors.isNotEmpty()) {
+                buildEpisodesFromAnchors(filteredNestedAnchors.reversed())
+            } else {
+                emptyList()
+            }
+        }
+
+        val serverEpisodes = buildServerEpisodes(document, url)
+        val nestedStreamEpisodes = groupedElements.singleOrNull()?.let { (_, anchor) ->
+            val href = fixUrl(anchor.attr("href"))
+            val rawTitle = anchor.text().trim()
+            val isGenericStreamingPage = href != url &&
+                (rawTitle.contains("streaming", true) || href.contains("streaming", true)) &&
+                parseEpisodeNumber(rawTitle, href) == null
+
+            if (!isGenericStreamingPage) {
+                emptyList()
+            } else {
+                buildNestedEpisodesFromStreamingLink(href)
+            }
+        } ?: emptyList()
         val useServerEpisodes = seasonHeaders.isEmpty() && serverEpisodes.isNotEmpty() && episodes.size <= 1
-        val finalEpisodes = if (useServerEpisodes) serverEpisodes else episodes
+        val finalEpisodes = when {
+            nestedStreamEpisodes.isNotEmpty() -> nestedStreamEpisodes
+            useServerEpisodes -> serverEpisodes
+            else -> episodes
+        }
 
         val altTitles = listOfNotNull(
             title,
@@ -414,12 +590,37 @@ class Anoboy : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val refererPrefix = "anoboyref::"
         val multiPrefix = "multi::"
-        val isMulti = data.startsWith(multiPrefix)
-        val document = if (isMulti) null else app.get(data).document
+        val hasEmbeddedReferer = data.startsWith(refererPrefix)
+        val resolvedData = if (hasEmbeddedReferer) {
+            data.removePrefix(refererPrefix)
+        } else {
+            data
+        }
+        val refererParts = if (hasEmbeddedReferer) {
+            resolvedData.split(":::", limit = 2)
+        } else {
+            emptyList()
+        }
+        val extractedReferer = if (hasEmbeddedReferer && refererParts.size == 2 && refererParts[0].isNotBlank()) {
+            refererParts[0]
+        } else {
+            null
+        }
+        val requestData = if (extractedReferer != null && refererParts.size == 2) {
+            refererParts[1]
+        } else {
+            resolvedData
+        }
+        val isMulti = requestData.startsWith(multiPrefix)
+        val requestReferer = extractedReferer ?: if (isMulti) mainUrl else requestData
+        val document = if (isMulti) null else app.get(requestData, referer = requestReferer).document
         val discoveredUrls = linkedSetOf<String>()
         val queuedUrls = ArrayDeque<String>()
         val crawledUrls = mutableSetOf<String>()
+        val seedUrls = mutableListOf<String>()
+        val googleVideoReferer = "https://youtube.googleapis.com/"
 
         fun isValidUrl(raw: String?): Boolean {
             val clean = raw?.trim().orEmpty()
@@ -431,7 +632,11 @@ class Anoboy : MainAPI() {
 
         fun resolveUrl(raw: String?, base: String): String? {
             if (!isValidUrl(raw)) return null
-            val clean = raw!!.trim()
+            var clean = raw!!.trim()
+            // Some legacy Anoboy acbatch pages output broken query values where '+' becomes ' '.
+            if (clean.contains("/uploads/stream/", true) && clean.contains("data=", true)) {
+                clean = clean.replace(" ", "+")
+            }
             return try {
                 when {
                     clean.startsWith("http://", true) || clean.startsWith("https://", true) -> clean
@@ -449,7 +654,22 @@ class Anoboy : MainAPI() {
 
         fun queueUrl(raw: String?, base: String) {
             val resolved = resolveUrl(raw, base) ?: return
+            seedUrls.add(resolved)
             if (discoveredUrls.add(resolved)) queuedUrls.add(resolved)
+        }
+
+        fun isDirectResolvableUrl(url: String): Boolean {
+            val lower = url.lowercase()
+            return lower.contains("blogger.com/video.g") ||
+                lower.contains("blogger.googleusercontent.com") ||
+                lower.contains("/uploads/adsbatch") ||
+                lower.contains("/uploads/acbatch") ||
+                lower.contains("/uploads/yupbatch") ||
+                lower.contains("/uploads/stream/embed.php") ||
+                lower.contains("yourupload.com/embed/") ||
+                lower.contains("yourupload.com/watch/") ||
+                lower.endsWith(".mp4") ||
+                lower.endsWith(".m3u8")
         }
 
         fun extractFromDoc(baseUrl: String, doc: org.jsoup.nodes.Document) {
@@ -458,6 +678,15 @@ class Anoboy : MainAPI() {
 
             doc.select("a[href*=\"yourupload.com/embed/\"], a[href*=\"yourupload.com/watch/\"], a[href*=\"www.yourupload.com/embed/\"], a[href*=\"www.yourupload.com/watch/\"]")
                 .forEach { queueUrl(it.attr("href"), baseUrl) }
+
+            doc.select(
+                "a[href*=\"/uploads/stream/embed.php\"], " +
+                    "a[href*=\"/uploads/acbatch.php\"], " +
+                    "a[href*=\"/uploads/adsbatch\"], " +
+                    "a[href*=\"/uploads/yupbatch\"], " +
+                    "a[href*=\"blogger.com/video.g\"], " +
+                    "a[href*=\"blogger.googleusercontent.com\"]"
+            ).forEach { queueUrl(it.attr("href"), baseUrl) }
 
             doc.select("#fplay a#allmiror[data-video], #fplay a[data-video], a#allmiror[data-video], a[data-video], [data-video]")
                 .forEach { anchor ->
@@ -477,7 +706,7 @@ class Anoboy : MainAPI() {
                 .forEach { queueUrl(it.attr("href"), baseUrl) }
 
             val bloggerRegex = Regex("""https?://(?:www\.)?blogger\.com/video\.g\?[^"'<\s]+""", RegexOption.IGNORE_CASE)
-            val batchRegex = Regex("""/uploads/(?:adsbatch[^"'\s]+|yupbatch[^"'\s]+)""", RegexOption.IGNORE_CASE)
+            val batchRegex = Regex("""/uploads/(?:adsbatch[^"'\s]+|yupbatch[^"'\s]+|acbatch[^"'\s]+|stream/embed\.php\?[^"'\s]+)""", RegexOption.IGNORE_CASE)
             val yourUploadRegex = Regex("""https?://(?:www\.)?yourupload\.com/(?:embed|watch)/[^"'<\s]+""", RegexOption.IGNORE_CASE)
             doc.select("script").forEach { script ->
                 val scriptData = script.data()
@@ -503,11 +732,15 @@ class Anoboy : MainAPI() {
                 lower.contains("yupbatch")
         }
 
+        if (!isMulti && isDirectResolvableUrl(requestData)) {
+            queueUrl(requestData, requestReferer)
+        }
+
         if (document != null) {
-            extractFromDoc(data, document)
+            extractFromDoc(requestData, document)
         }
         if (isMulti) {
-            data.removePrefix(multiPrefix)
+            requestData.removePrefix(multiPrefix)
                 .split("||")
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
@@ -519,7 +752,7 @@ class Anoboy : MainAPI() {
             val next = queuedUrls.removeFirst()
             if (!shouldCrawl(next) || !crawledUrls.add(next)) continue
             try {
-                val nestedDoc = app.get(next, referer = data).document
+                val nestedDoc = app.get(next, referer = requestReferer).document
                 extractFromDoc(next, nestedDoc)
             } catch (_: Exception) {
                 // skip dead mirror page
@@ -535,7 +768,7 @@ class Anoboy : MainAPI() {
                 try {
                     val decodedHtml = base64Decode(base64.replace("\\s".toRegex(), ""))
                     Jsoup.parse(decodedHtml).selectFirst("iframe")?.getIframeAttr()?.let { iframe ->
-                        queueUrl(iframe, data)
+                        queueUrl(iframe, requestReferer)
                     }
                 } catch (_: Exception) {
                     // ignore broken base64 mirrors
@@ -558,13 +791,240 @@ class Anoboy : MainAPI() {
             foundLinks++
             callback(link)
         }
+        val bloggerExtractor = BloggerExtractor()
+
+        fun decodeUnicodeEscapes(input: String): String {
+            val unicodeRegex = Regex("""\\u([0-9a-fA-F]{4})""")
+            var output = input
+            repeat(2) {
+                output = unicodeRegex.replace(output) { match ->
+                    match.groupValues[1].toInt(16).toChar().toString()
+                }
+            }
+            output = output.replace("\\/", "/")
+            output = output.replace("\\=", "=")
+            output = output.replace("\\&", "&")
+            output = output.replace("\\\\", "\\")
+            output = output.replace("\\\"", "\"")
+            return output
+        }
+
+        fun normalizeVideoUrl(input: String): String {
+            return decodeUnicodeEscapes(input)
+                .replace("\\u003d", "=")
+                .replace("\\u0026", "&")
+                .replace("\\u002F", "/")
+                .replace("\\/", "/")
+                .replace("\\", "")
+        }
+
+        fun itagToQuality(itag: Int?): Int {
+            return when (itag) {
+                18 -> Qualities.P360.value
+                22 -> Qualities.P720.value
+                37 -> Qualities.P1080.value
+                59 -> Qualities.P480.value
+                43 -> Qualities.P360.value
+                36 -> Qualities.P240.value
+                17 -> Qualities.P144.value
+                137 -> Qualities.P1080.value
+                136 -> Qualities.P720.value
+                135 -> Qualities.P480.value
+                134 -> Qualities.P360.value
+                133 -> Qualities.P240.value
+                160 -> Qualities.P144.value
+                else -> Qualities.Unknown.value
+            }
+        }
+
+        suspend fun emitBloggerDirectLinks(bloggerUrl: String, referer: String?): Boolean {
+            val fixedUrl = if (bloggerUrl.startsWith("//")) "https:$bloggerUrl" else bloggerUrl
+            if (fixedUrl.contains("blogger.googleusercontent.com", true)) {
+                callbackWrapper(
+                    newExtractorLink("Blogger", "Blogger", fixedUrl, INFER_TYPE) {
+                        this.referer = referer ?: fixedUrl
+                    }
+                )
+                return true
+            }
+
+            val token = Regex("[?&]token=([^&]+)")
+                .find(fixedUrl)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?: return false
+
+            val page = runCatching {
+                app.get(
+                    fixedUrl,
+                    referer = referer ?: "$mainUrl/",
+                    headers = mapOf(
+                        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "User-Agent" to USER_AGENT
+                    )
+                )
+            }.getOrNull() ?: return false
+            val html = page.text
+            val cookies = page.cookies
+
+            val fSid = Regex("FdrFJe\":\"(-?\\d+)\"")
+                .find(html)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?: ""
+            val bl = Regex("cfb2h\":\"([^\"]+)\"")
+                .find(html)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?: return false
+            val hl = Regex("lang=\"([^\"]+)\"")
+                .find(html)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.ifBlank { null }
+                ?: "en-US"
+            val reqId = (10000..99999).random()
+            val rpcId = "WcwnYd"
+            val payload = """[[["$rpcId","[\"$token\",\"\",0]",null,"generic"]]]"""
+            val apiUrl = "https://www.blogger.com/_/BloggerVideoPlayerUi/data/batchexecute" +
+                "?rpcids=$rpcId&source-path=%2Fvideo.g&f.sid=$fSid&bl=$bl&hl=$hl&_reqid=$reqId&rt=c"
+
+            val response = runCatching {
+                app.post(
+                    apiUrl,
+                    data = mapOf("f.req" to payload),
+                    referer = fixedUrl,
+                    cookies = cookies,
+                    headers = mapOf(
+                        "Origin" to "https://www.blogger.com",
+                        "Accept" to "*/*",
+                        "Content-Type" to "application/x-www-form-urlencoded;charset=UTF-8",
+                        "X-Same-Domain" to "1",
+                        "User-Agent" to USER_AGENT
+                    )
+                ).text
+            }.getOrNull() ?: return false
+
+            val directUrls = Regex("""https://[^\s"']+""")
+                .findAll(decodeUnicodeEscapes(response))
+                .map { it.value }
+                .plus(
+                    Regex("""https://[^\s"']+""")
+                        .findAll(response)
+                        .map { it.value }
+                )
+                .map { normalizeVideoUrl(it) }
+                .filter {
+                    it.contains("googlevideo.com/videoplayback") ||
+                        it.contains("blogger.googleusercontent.com")
+                }
+                .distinct()
+                .toList()
+
+            directUrls.forEach { videoUrl ->
+                val itag = Regex("[?&]itag=(\\d+)")
+                    .find(videoUrl)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
+                val directReferer = if (videoUrl.contains("googlevideo.com/", true)) {
+                    googleVideoReferer
+                } else {
+                    fixedUrl
+                }
+                callbackWrapper(
+                    newExtractorLink("Blogger", "Blogger", videoUrl, INFER_TYPE) {
+                        this.referer = directReferer
+                        this.headers = mapOf(
+                            "Referer" to directReferer,
+                            "User-Agent" to USER_AGENT,
+                            "Accept" to "*/*"
+                        )
+                        this.quality = itagToQuality(itag)
+                    }
+                )
+            }
+
+            return directUrls.isNotEmpty()
+        }
+
+        suspend fun resolveLegacyMirrorPage(pageUrl: String): Boolean {
+            val lower = pageUrl.lowercase()
+            val isLegacyMirrorPage = lower.contains("/uploads/adsbatch") ||
+                lower.contains("/uploads/acbatch") ||
+                lower.contains("/uploads/yupbatch") ||
+                lower.contains("/uploads/stream/embed.php")
+            if (!isLegacyMirrorPage) return false
+
+            val doc = runCatching {
+                app.get(pageUrl, referer = requestReferer).document
+            }.getOrNull() ?: return false
+
+            val resolvedCandidates = linkedSetOf<String>()
+            fun addCandidate(raw: String?) {
+                val resolved = resolveUrl(raw, pageUrl) ?: return
+                resolvedCandidates.add(resolved)
+            }
+
+            doc.select("iframe[src], iframe[data-src], iframe[data-litespeed-src]")
+                .forEach { addCandidate(it.getIframeAttr()) }
+            doc.select("a[href], [data-video], [data-src], [data-url], [data-iframe], [data-embed]")
+                .forEach { el ->
+                    addCandidate(el.attr("href"))
+                    addCandidate(el.attr("data-video"))
+                    addCandidate(el.attr("data-src"))
+                    addCandidate(el.attr("data-url"))
+                    addCandidate(el.attr("data-iframe"))
+                    addCandidate(el.attr("data-embed"))
+                }
+
+            val bloggerRegex = Regex("""https?://(?:www\.)?blogger\.com/video\.g\?[^"'<\s]+""", RegexOption.IGNORE_CASE)
+            val fileRegex = Regex("""https?://[^\s"'<>]+""", RegexOption.IGNORE_CASE)
+            doc.select("script").forEach { script ->
+                val scriptData = script.data()
+                bloggerRegex.findAll(scriptData).forEach { addCandidate(it.value) }
+                fileRegex.findAll(scriptData).forEach { addCandidate(it.value) }
+            }
+
+            var resolvedAny = false
+            resolvedCandidates.forEach { candidate ->
+                when {
+                    candidate.contains("blogger.com/video.g", true) ||
+                        candidate.contains("blogger.googleusercontent.com", true) -> {
+                        if (emitBloggerDirectLinks(candidate, pageUrl)) resolvedAny = true
+                    }
+
+                    candidate != pageUrl -> {
+                        loadExtractor(candidate, pageUrl, subtitleCallback, callbackWrapper)
+                    }
+                }
+            }
+
+            return resolvedAny
+        }
+
+        seedUrls
+            .distinct()
+            .filter {
+                val lower = it.lowercase()
+                lower.contains("/uploads/adsbatch") ||
+                    lower.contains("/uploads/acbatch") ||
+                    lower.contains("/uploads/yupbatch") ||
+                    lower.contains("/uploads/stream/embed.php")
+            }
+            .forEach { resolveLegacyMirrorPage(it) }
 
         // Try Blogger first, then continue with all other mirrors so users can switch sources.
         bloggerLinks.distinct().forEach { link ->
-            loadExtractor(link, data, subtitleCallback, callbackWrapper)
+            if (!emitBloggerDirectLinks(link, requestReferer)) {
+                bloggerExtractor.getUrl(link, requestReferer, subtitleCallback, callbackWrapper)
+            }
         }
         fallbackLinks.distinct().forEach { link ->
-            loadExtractor(link, data, subtitleCallback, callbackWrapper)
+            val resolvedLegacy = resolveLegacyMirrorPage(link)
+            if (!resolvedLegacy) {
+                loadExtractor(link, requestReferer, subtitleCallback, callbackWrapper)
+            }
         }
 
         return true
