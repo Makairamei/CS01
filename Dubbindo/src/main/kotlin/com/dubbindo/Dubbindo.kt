@@ -20,6 +20,9 @@ class Dubbindo : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = "${request.data}?page_id=$page"
 
         Log.d("MainPage", "URL: $url | Page: $page")
@@ -82,6 +85,7 @@ class Dubbindo : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title = document.selectFirst("h1")?.text()?.trim() ?: return null
@@ -120,6 +124,7 @@ class Dubbindo : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val doc = app.get(data).document
 
         val mp4s = doc.select("script")

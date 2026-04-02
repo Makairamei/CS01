@@ -29,6 +29,9 @@ class Dramabox : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val safePage = if (page < 1) 1 else page
         val response = fetchDramaList(request.data, safePage)
         val items = response?.data.orEmpty()
@@ -43,6 +46,7 @@ class Dramabox : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val keyword = query.trim()
         if (keyword.isBlank()) return emptyList()
 
@@ -54,6 +58,7 @@ class Dramabox : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val dramaId = extractDramaId(url)
         if (dramaId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
@@ -102,6 +107,7 @@ class Dramabox : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val parsed = parseJson<LoadData>(data)
         val dramaId = parsed.bookId ?: return false
         val episodeNo = parsed.episodeNo ?: return false

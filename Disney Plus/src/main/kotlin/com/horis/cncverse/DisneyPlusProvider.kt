@@ -36,6 +36,9 @@ class DisneyPlusProvider : MainAPI() {
   )
 
   override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
     cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
     val cookies = mapOf(
       "t_hash_t" to cookie_value,
@@ -73,6 +76,7 @@ class DisneyPlusProvider : MainAPI() {
   }
 
   override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
     cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
     val cookies = mapOf(
       "t_hash_t" to cookie_value,
@@ -91,6 +95,7 @@ class DisneyPlusProvider : MainAPI() {
   }
 
   override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
     cookie_value = if (cookie_value.isEmpty()) bypass(mainUrl) else cookie_value
     val id = parseJson<Id>(url).id
     val cookies = mapOf(
@@ -202,6 +207,7 @@ class DisneyPlusProvider : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
   ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
     val (title, id) = parseJson<LoadData>(data)
     val cookies = mapOf(
       "t_hash_t" to cookie_value,

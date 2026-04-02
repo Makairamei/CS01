@@ -145,6 +145,9 @@ class MovieBoxProvider : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val perPage = 15
         val url = if (request.data.contains("|")) "$mainUrl/wefeed-mobile-bff/subject-api/list" else "$mainUrl/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${request.data}&page=$page&perPage=$perPage"
 
@@ -298,6 +301,7 @@ class MovieBoxProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
 
         val id = Regex("""subjectId=([^&]+)""")
             .find(url)
@@ -497,6 +501,7 @@ class MovieBoxProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         Log.d("Phisher",data)
         try {
             val parts = data.split("|")

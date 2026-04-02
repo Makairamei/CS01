@@ -40,6 +40,9 @@ class Fufafilm : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
     context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val data = request.data.format(page)
     val document = app.get("$mainUrl/$data").document
@@ -96,6 +99,7 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 
         override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
     // Pakai Desktop User-Agent agar website tidak mengirim halaman mobile
     val desktopHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -233,6 +237,7 @@ private fun Element.toSearchResult(): SearchResponse? {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
         val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")

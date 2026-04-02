@@ -146,6 +146,9 @@ class AnimeSailProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val document = request(request.data + page).document
         val home = document.select("article").map {
             it.toSearchResult()
@@ -183,6 +186,7 @@ class AnimeSailProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val link = "$mainUrl/?s=$query"
         val document = request(link).document
 
@@ -192,6 +196,7 @@ class AnimeSailProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = request(url).document
 
         val title = document.selectFirst("h1.entry-title")?.text().toString()
@@ -228,6 +233,7 @@ class AnimeSailProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = request(data).document
 

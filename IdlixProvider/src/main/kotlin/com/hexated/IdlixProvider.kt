@@ -49,6 +49,9 @@ class IdlixProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = request.data.split("?")
         val nonPaged = request.name == "Featured" && page <= 1
         val req = if (nonPaged) {
@@ -101,6 +104,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val req = app.get("$mainUrl/search/$query")
         mainUrl = getBaseUrl(req.url)
         val document = req.document
@@ -116,6 +120,7 @@ class IdlixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val request = app.get(url)
         directUrl = getBaseUrl(request.url)
         val document = request.document
@@ -200,6 +205,7 @@ class IdlixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
         val scriptRegex = """window\.idlixNonce=['"]([a-f0-9]+)['"].*?window\.idlixTime=(\d+).*?""".toRegex(RegexOption.DOT_MATCHES_ALL)

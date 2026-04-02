@@ -96,6 +96,9 @@ class Tokusatsu : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = "${mainUrl}/${request.data}/page/$page/"
         
         val document = app.get(url).document
@@ -127,6 +130,7 @@ class Tokusatsu : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchUrl = "$mainUrl/search/${query}/"
         val document = app.get(searchUrl).document
 
@@ -144,6 +148,7 @@ class Tokusatsu : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val titleElement = document.selectFirst("h1.heading-title, .title, .film-name,div.row h1") ?:
@@ -205,6 +210,7 @@ class Tokusatsu : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         loadExtractor(data, data, subtitleCallback, callback)
         return true
     }

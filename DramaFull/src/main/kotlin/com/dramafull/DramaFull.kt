@@ -56,6 +56,9 @@ class DramaFull : MainAPI() {
         }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val (type, sort, adultFlag) = request.data.split(":").let {
             val t = it.getOrNull(0) ?: "-1"
             val s = it.getOrNull(1)?.toIntOrNull() ?: 1
@@ -108,6 +111,7 @@ class DramaFull : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse>? {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val url = "$mainUrl/api/live-search/$query"
         return app.get(url)
             .parsedSafe<Search>()
@@ -116,6 +120,7 @@ class DramaFull : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val doc = app.get(url).documentLarge
         val title = doc.selectFirst("div.right-info h1")?.text() ?: "UnKnown"
         val poster = fixUrlNull(doc.selectFirst("meta[property=og:image]")?.attr("content")) ?: ""
@@ -179,6 +184,7 @@ class DramaFull : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val doc = app.get(data).documentLarge
         val script = doc.select("script:containsData(signedUrl)").firstOrNull()?.toString() ?: return false
         val signedUrl = Regex("""window\.signedUrl\s*=\s*"(.+?)"""").find(script)?.groupValues?.get(1)?.replace("\\/","/") ?: return false

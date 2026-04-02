@@ -48,6 +48,9 @@ class WinbuProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val path = if (page == 1) {
             request.data.replace("/page/%d/", "/").replace("page/%d/", "")
         } else {
@@ -118,6 +121,7 @@ class WinbuProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document = app.get("$mainUrl/?s=$query").document
         return document.select("#movies .ml-item, .movies-list .ml-item")
             .mapNotNull { it.toSearchResult("Series") }
@@ -133,6 +137,7 @@ class WinbuProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
         val infoRoot = document.selectFirst(".m-info .t-item") ?: document
 
@@ -204,6 +209,7 @@ class WinbuProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).document
         var found = false
         val seen = hashSetOf<String>()

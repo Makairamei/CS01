@@ -124,6 +124,9 @@ open class SoraStream : TmdbProvider() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val adultQuery =
             if (settingsForProvider.enableAdult) "" else "&without_keywords=190370|13059|226161|195669"
@@ -149,6 +152,7 @@ open class SoraStream : TmdbProvider() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun search(query: String): List<SearchResponse>? {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         return app.get("$tmdbAPI/search/multi?api_key=$apiKey&language=en-US&query=$query&page=1&include_adult=${settingsForProvider.enableAdult}")
             .parsedSafe<Results>()?.results?.mapNotNull { media ->
                 media.toSearchResponse()
@@ -156,6 +160,7 @@ open class SoraStream : TmdbProvider() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
     val data: Data? = try {
         parseJson<Data>(url)
     } catch (e: Exception) {
@@ -318,6 +323,7 @@ open class SoraStream : TmdbProvider() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val res = parseJson<LinkData>(data)
 

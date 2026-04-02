@@ -55,6 +55,9 @@ class Animasu : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("$mainUrl/pencarian/?${request.data}&halaman=$page").document
         val home = document.select("div.listupd div.bs").map {
@@ -94,12 +97,14 @@ class Animasu : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         return app.get("$mainUrl/?s=$query").document.select("div.listupd div.bs").map {
             it.toSearchResult()
         }
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title =
@@ -143,6 +148,7 @@ class Animasu : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).document
         document.select(".mobius > .mirror > option").mapNotNull {
                 fixUrl(

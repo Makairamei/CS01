@@ -57,6 +57,9 @@ class Anoboy : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val path = request.data.trimStart('/')
         val url = if (page <= 1) {
             "$mainUrl/$path"
@@ -106,6 +109,7 @@ class Anoboy : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document = app.get("$mainUrl/?s=$query").document
         val modernResults = document.select("div.column-content > a[href]:has(div.amv)")
             .mapNotNull { it.toSearchResult() }
@@ -139,6 +143,7 @@ class Anoboy : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title, h2.entry-title")?.text()?.trim().orEmpty()
@@ -590,6 +595,7 @@ class Anoboy : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val refererPrefix = "anoboyref::"
         val multiPrefix = "multi::"
         val hasEmbeddedReferer = data.startsWith(refererPrefix)

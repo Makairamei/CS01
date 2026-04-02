@@ -38,6 +38,9 @@ class Pusatfilm : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val data = request.data.format(page)
         val document = app.get("$mainUrl/$data").document
@@ -73,6 +76,7 @@ class Pusatfilm : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document = app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv", timeout = 50L).document
         return document.select("article.item").mapNotNull { it.toSearchResult() }
     }
@@ -86,6 +90,7 @@ class Pusatfilm : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val fetch = app.get(url)
         val document = fetch.document
 
@@ -161,6 +166,7 @@ class Pusatfilm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).document
         val visited = linkedSetOf<String>()
         var found = false

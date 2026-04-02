@@ -54,6 +54,9 @@ class NontonAnimeIDProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val pageUrl = if (page == 1) {
             request.data
@@ -96,6 +99,7 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val link = "$mainUrl/?s=$query"
         val document = app.get(link).document
 
@@ -115,6 +119,7 @@ class NontonAnimeIDProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val canonicalUrl = if (url.contains("/anime/")) {
             url
         } else {
@@ -323,6 +328,7 @@ class NontonAnimeIDProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
         val iframeLinks = linkedSetOf<String>()

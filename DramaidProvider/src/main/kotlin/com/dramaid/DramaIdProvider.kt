@@ -26,6 +26,9 @@ class DramaIdProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = if (request.data.isBlank())
             "$mainUrl/page/$page/"
         else
@@ -73,6 +76,7 @@ class DramaIdProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val doc = app.get("$mainUrl/?s=${query.replace(" ", "+")}").document
 
         return doc.select("h3.title_post").mapNotNull {
@@ -110,6 +114,7 @@ class DramaIdProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val doc = app.get(url).document
 
         val title = doc.selectFirst("h1.single-title, h2.single-title")
@@ -181,6 +186,7 @@ class DramaIdProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val doc = app.get(data).document
         var found = false

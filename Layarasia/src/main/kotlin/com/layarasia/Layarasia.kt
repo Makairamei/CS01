@@ -46,6 +46,9 @@ class Layarasia : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = "$mainUrl/${request.data}".plus("&page=$page")
         val document = app.get(url).document
         val items = document.select("div.listupd article.bs")
@@ -75,6 +78,7 @@ class Layarasia : MainAPI() {
 }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
     val document = app.get("$mainUrl/?s=$query", timeout = 50L).document
     val results = document.select("div.listupd article.bs")
         .mapNotNull { it.toSearchResult() }
@@ -90,6 +94,7 @@ class Layarasia : MainAPI() {
     }
 }
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
     val document = app.get(url).document
 
     
@@ -195,6 +200,7 @@ val episodes = episodeElements
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).document
 
         document.selectFirst("div.player-embed iframe")

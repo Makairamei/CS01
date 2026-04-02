@@ -45,6 +45,7 @@ class Watch32 : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val url = "$mainUrl/search/${query.replace(" ", "-")}"
         val response = app.get(url)
         return if (response.code == 200) searchResponseBuilder(response.documentLarge)
@@ -62,6 +63,9 @@ class Watch32 : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = request.data + page
         val response = app.get(url)
         if (response.code == 200)
@@ -74,6 +78,7 @@ class Watch32 : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val res = app.get(url)
         if (res.code != 200) throw ErrorLoadingException("Could not load data$url")
 
@@ -242,6 +247,7 @@ class Watch32 : MainAPI() {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val serversRes = app.get("$mainUrl/ajax/episode/$data").documentLarge.select("a.link-item")
         serversRes.forEach { server ->
             val linkId =

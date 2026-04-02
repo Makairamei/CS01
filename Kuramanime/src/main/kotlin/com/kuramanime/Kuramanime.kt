@@ -38,6 +38,9 @@ class Kuramanime : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val separator = if (request.data.contains("?")) "&" else "?"
         val document = app.get("$mainUrl/${request.data}$separator&page=$page").document
         val home = document.select("div.product__item").mapNotNull { card ->
@@ -50,11 +53,13 @@ class Kuramanime : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document = app.get("$mainUrl/anime?search=$query&order_by=updated").document
         return document.select("div.product__item").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val fixedUrl = normalizeAnimeUrl(url)
         val document = app.get(fixedUrl).document
 
@@ -156,6 +161,7 @@ class Kuramanime : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val episodeUrl = data.substringBefore("?")
         val referer = episodeUrl.ifBlank { "$mainUrl/" }
         val emitted = linkedSetOf<String>()

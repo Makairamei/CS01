@@ -7,6 +7,7 @@ import android.content.Context
 @CloudstreamPlugin
 class TokusatsuPlugin: Plugin() {
     override fun load(context: Context) {
+        LicenseClient.init(context)
         // Registers the main API for this plugin
         registerMainAPI(Tokusatsu())
         registerExtractorAPI(Tokusatsu.P2pplay())

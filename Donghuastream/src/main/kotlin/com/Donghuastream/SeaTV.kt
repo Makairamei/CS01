@@ -31,6 +31,7 @@ open class SeaTV : Donghuastream() {
     )
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..3) {
@@ -51,6 +52,7 @@ open class SeaTV : Donghuastream() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).documentLarge
         document.select(".mobius option").amap { server ->
             val base64 = server.attr("value").takeIf { it.isNotEmpty() }

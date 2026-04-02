@@ -89,6 +89,9 @@ class Cinemacity : MainAPI() {
     override suspend fun getMainPage(
         page: Int, request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val doc = if (page==1) app.get("$mainUrl/${request.data}", headers = headers).document
         else app.get("$mainUrl/${request.data}/page/$page", headers = headers).document
 
@@ -136,6 +139,7 @@ class Cinemacity : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val page = app.get(url, headers)
         val doc = page.document
 
@@ -431,6 +435,7 @@ class Cinemacity : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val obj = JSONObject(data)
 

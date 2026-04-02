@@ -38,6 +38,9 @@ class Nomat : MainAPI() {
 )
 
    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
     context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val url = "$mainUrl/${request.data}/$page/"
     val document = app.get(url).document
@@ -153,6 +156,7 @@ override suspend fun search(
 
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
     val document = app.get(url).document
 
     val title = document.selectFirst("div.video-title h1")?.text()
@@ -226,6 +230,7 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
     return try {
         // tambahkan referer supaya tidak invalid credential
         val nhDoc = app.get(data, referer = mainUrl, timeout = 100L).document

@@ -54,6 +54,9 @@ class Ngefilm : MainAPI() {
             )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
     context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
     val data = request.data.format(page)
     val document = app.get("$mainUrl/$data").document
@@ -110,6 +113,7 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val fetch = app.get(url)
         directUrl = getBaseUrl(fetch.url)
         val document = fetch.document
@@ -204,6 +208,7 @@ private fun Element.toSearchResult(): SearchResponse? {
             subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
         val id = document.selectFirst("div#muvipro_player_content_id")?.attr("data-id")

@@ -25,6 +25,9 @@ class Anichin : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get("${mainUrl}/${request.data}&page=$page").document
         val home = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
@@ -48,6 +51,7 @@ class Anichin : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchResponse = mutableListOf<SearchResponse>()
         for (i in 1..3) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
@@ -59,6 +63,7 @@ class Anichin : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(fixUrl(url)).document
         val title = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
         var poster = document.select("div.ime > img").attr("src")
@@ -110,6 +115,7 @@ class Anichin : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(fixUrl(data)).document
         document.select(".mobius option").forEach { server ->
             val base64 = server.attr("value")

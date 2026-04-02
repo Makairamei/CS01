@@ -92,6 +92,9 @@ class OneTouchTV : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val rawResponse = try {
             app.get("$mainUrl/${request.data}").text
         } catch (e: Exception) {
@@ -220,6 +223,7 @@ class OneTouchTV : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val rawResponse = try {
             app.get(url).text
         } catch (e: Exception) {

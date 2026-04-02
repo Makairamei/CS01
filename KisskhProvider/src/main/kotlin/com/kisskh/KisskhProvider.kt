@@ -50,6 +50,9 @@ class KisskhProvider : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val home = app.get("$mainUrl/api/DramaList/List?page=$page${request.data}")
             .parsedSafe<Responses>()?.data
             ?.mapNotNull { media -> media.toSearchResponse() }
@@ -78,6 +81,7 @@ class KisskhProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchResponse =
             app.get("$mainUrl/api/DramaList/Search?q=$query&type=0", referer = "$mainUrl/").text
         return tryParseJson<ArrayList<Media>>(searchResponse)?.mapNotNull { it.toSearchResponse() }
@@ -87,6 +91,7 @@ class KisskhProvider : MainAPI() {
     private fun getTitle(str: String): String = str.replace(Regex("[^a-zA-Z0-9]"), "-")
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val id = url.split("/")
         val res = app.get(
             "$mainUrl/api/DramaList/Drama/${id.last()}?isq=false",
@@ -132,6 +137,7 @@ class KisskhProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val loadData = parseJson<Data>(data)
 
       

@@ -25,6 +25,9 @@ class Pmsm : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val targetUrl = buildPagedUrl(request.data, page)
         val document = app.get(targetUrl, timeout = 60).document
 
@@ -39,6 +42,7 @@ class Pmsm : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val encoded = URLEncoder.encode(query.trim(), "UTF-8")
         val document = app.get("$mainUrl/?s=$encoded", timeout = 60).document
 
@@ -51,6 +55,7 @@ class Pmsm : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url, timeout = 60).document
         val isSeries = url.contains("/tvshows/")
 
@@ -123,6 +128,7 @@ class Pmsm : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         var pageUrl = data
         var document = app.get(pageUrl, timeout = 60).document
         var options = document.getServerOptions()

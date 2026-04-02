@@ -50,6 +50,9 @@ class Gojodesu : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = "$mainUrl/${request.data}&page=$page"
         val document = app.get(url).document
         val items = document.select("div.listupd article.bs")
@@ -73,6 +76,7 @@ class Gojodesu : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document = app.get("$mainUrl/?s=$query").document
         return document.select("div.listupd article.bs")
             .mapNotNull { it.toSearchResult() }
@@ -92,6 +96,7 @@ class Gojodesu : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")
@@ -229,6 +234,7 @@ class Gojodesu : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
     val pageResp = app.get(data)
     val document = pageResp.document
     val html = pageResp.text

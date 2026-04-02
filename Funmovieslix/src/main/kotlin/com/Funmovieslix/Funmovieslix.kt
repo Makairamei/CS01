@@ -49,6 +49,9 @@ class Funmovieslix : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
     val document = if (request.data == "latest-updates") {
         val url = if (page == 1)
             "$mainUrl/latest-updates/"
@@ -111,12 +114,14 @@ class Funmovieslix : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
             val document = app.get("${mainUrl}?s=$query").document
             val results =document.select("#gmr-main-load div.movie-card").mapNotNull { it.toSearchResult() }
         return results
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
         val title =document.select("meta[property=og:title]").attr("content").substringBefore("(").substringBefore("-").trim()
         val poster = document.select("meta[property=og:image]").attr("content")
@@ -192,6 +197,7 @@ class Funmovieslix : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val document = app.get(data).document
 
         // 1. Get all <script> tags that contain "embeds"

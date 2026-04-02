@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class HidoristreamPlugin : Plugin() {
     override fun load(context: Context) {
+        LicenseClient.init(context)
         Hidoristream.context = context
         registerMainAPI(Hidoristream())
         registerExtractorAPI(Dingtezuni())

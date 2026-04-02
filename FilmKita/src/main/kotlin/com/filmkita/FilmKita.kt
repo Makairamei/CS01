@@ -39,6 +39,9 @@ class FilmKita : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val document = app.get("$mainUrl/${request.data.format(page)}").document
         val home = document.select("article.item").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(request.name, home)
@@ -69,12 +72,14 @@ class FilmKita : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val document =
             app.get("$mainUrl/?s=$query&post_type[]=post&post_type[]=tv").document
         return document.select("article.item").mapNotNull { it.toSearchResult() }
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         var document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")?.text()?.trim().orEmpty()
@@ -155,6 +160,7 @@ class FilmKita : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
 

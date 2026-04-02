@@ -53,6 +53,9 @@ class PrimeVideoProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val data = app.get(
             "$mainUrl/tv/pv/homepage.php",
             cookies = getCookie(),
@@ -86,6 +89,7 @@ class PrimeVideoProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val url = "$mainUrl/pv/search.php?s=$query&t=${APIHolder.unixTime}"
         val data = app.get(url, referer = "$mainUrl/home", cookies = getCookie()).parsed<SearchData>()
 
@@ -98,6 +102,7 @@ class PrimeVideoProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val id = parseJson<Id>(url).id
         val data = app.get(
             "$mainUrl/pv/post.php?id=$id&t=${APIHolder.unixTime}",
@@ -203,6 +208,7 @@ class PrimeVideoProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val (title, id) = parseJson<LoadData>(data)
         val playlist = app.get(
             "$newUrl/pv/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}",

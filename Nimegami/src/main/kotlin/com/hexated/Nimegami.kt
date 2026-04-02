@@ -42,6 +42,9 @@ class Nimegami : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val document = app.get("$mainUrl${request.data}/page/$page").document
         val home = document.select("div.post-article article, div.archive article").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(
@@ -67,6 +70,7 @@ class Nimegami : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchResponse = mutableListOf<SearchResponse>()
         for (i in 1..2) {
             val res = app.get("$mainUrl/page/$i/?s=$query&post_type=post").document.select("div.archive article").mapNotNull { it.toSearchResult() }
@@ -76,6 +80,7 @@ class Nimegami : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
         val table = document.select("div#Info table tbody")
         val title = table.getContent("Judul :").text()
@@ -123,6 +128,7 @@ class Nimegami : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         tryParseJson<ArrayList<Sources>>(base64Decode(data))?.map { sources ->
             sources.url?.amap { url ->
                 loadFixedExtractor(url, sources.format, "$mainUrl/", subtitleCallback, callback)

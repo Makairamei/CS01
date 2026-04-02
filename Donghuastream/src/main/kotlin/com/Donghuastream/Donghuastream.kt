@@ -44,6 +44,9 @@ open class Donghuastream : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val document = app.get("$mainUrl/${request.data}$page").documentLarge
         val home     = document.select("div.listupd > article").mapNotNull { it.toSearchResult() }
 
@@ -76,6 +79,7 @@ open class Donghuastream : MainAPI() {
 
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..3) {
@@ -96,6 +100,7 @@ open class Donghuastream : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).documentLarge
         val title       = document.selectFirst("h1.entry-title")?.text()?.trim().toString()
         val href=document.selectFirst(".eplister li > a")?.attr("href") ?:""
@@ -143,6 +148,7 @@ open class Donghuastream : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val html = app.get(data).documentLarge
 
         val options = html.select("option[data-index]")

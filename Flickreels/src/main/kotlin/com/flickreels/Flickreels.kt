@@ -24,6 +24,9 @@ class Flickreels : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val items = when (request.data) {
             "foryou" -> fetchForYou(page)
             "rank" -> if (page == 1) fetchRank() else emptyList()
@@ -41,6 +44,7 @@ class Flickreels : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val keyword = query.trim()
         if (keyword.isBlank()) return emptyList()
 
@@ -53,6 +57,7 @@ class Flickreels : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val playletId = extractPlayletId(url)
         if (playletId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
@@ -94,6 +99,7 @@ class Flickreels : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val parsed = parseJson<LoadData>(data)
         val playletId = parsed.playletId ?: return false
         val episodeNo = parsed.episodeNo ?: return false

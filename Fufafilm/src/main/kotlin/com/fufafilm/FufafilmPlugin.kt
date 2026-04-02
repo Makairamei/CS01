@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class FufafilmPlugin : Plugin() {
     override fun load(context: Context) {
+        LicenseClient.init(context)
         Fufafilm.context = context
         registerMainAPI(Fufafilm())
         registerExtractorAPI(Dingtezuni())

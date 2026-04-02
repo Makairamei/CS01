@@ -63,6 +63,9 @@ class Auratail : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url = "$mainUrl/page/$page/"
         val doc = app.get(url).document
         val items = doc.select("div.listupd article.bs, div.listupd div.bsx")
@@ -72,6 +75,7 @@ class Auratail : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val results = mutableListOf<SearchResponse>()
         for (i in 1..3) {
             val doc = app.get("$mainUrl/page/$i/?s=$query").document
@@ -85,6 +89,7 @@ class Auratail : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val doc = app.get(url).document
         val titleRaw = doc.selectFirst("h1.entry-title, h1.title")?.text()?.trim().orEmpty()
         val title = titleRaw.replace(Regex("""\sEpisode\s\d+"""), "")
@@ -138,6 +143,7 @@ class Auratail : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val doc = app.get(data).document
         val links = mutableListOf<String>()
         doc.select(".mobius option, select option, .mirror option").forEach {

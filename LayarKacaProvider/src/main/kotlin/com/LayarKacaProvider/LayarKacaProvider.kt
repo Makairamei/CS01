@@ -40,6 +40,9 @@ class LayarKacaProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
         val document = app.get(request.data + page).document
         val home = document.select("article figure").mapNotNull {
@@ -89,6 +92,7 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val refer = app.get(mainUrl).url
         val res = app.get("$searchurl/search.php?s=$query", referer = refer).text
         val results = mutableListOf<SearchResponse>()
@@ -120,6 +124,7 @@ class LayarKacaProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val fixUrl = getProperLink(url)
         val document = app.get(fixUrl).document
         val baseurl=fetchURL(fixUrl)
@@ -193,6 +198,7 @@ class LayarKacaProvider : MainAPI() {
     }
 
          override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
 

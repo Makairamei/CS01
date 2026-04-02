@@ -56,6 +56,9 @@ class Kickassanime : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse? {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val url=if (request.data.startsWith("filter"))
         {
             "${mainUrl}/api/anime?page=$page&${request.data}"
@@ -123,6 +126,7 @@ val json = """
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val showName = url.substringAfter(mainUrl)
         val loadJson = app.get("$mainUrl/api/show/$showName").parsedSafe<loadres>()
 
@@ -159,6 +163,7 @@ val json = """
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         app.get(data).parsedSafe<ServersRes>()?.servers?.amap{ it ->
             if(it.name.contains("VidStreaming")) {
                 val host = getBaseUrl(it.src)

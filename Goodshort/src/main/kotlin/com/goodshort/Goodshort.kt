@@ -24,6 +24,9 @@ class Goodshort : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val items = fetchHome(request.data, page)
             .distinctBy { it.bookId }
             .mapNotNull { it.toSearchResult() }
@@ -35,6 +38,7 @@ class Goodshort : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val keyword = query.trim()
         if (keyword.isBlank()) return emptyList()
 
@@ -45,6 +49,7 @@ class Goodshort : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val bookId = extractBookId(url)
         if (bookId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
@@ -85,6 +90,7 @@ class Goodshort : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val parsed = parseJson<LoadData>(data)
         val bookId = parsed.bookId ?: return false
         val chapterId = parsed.chapterId ?: return false

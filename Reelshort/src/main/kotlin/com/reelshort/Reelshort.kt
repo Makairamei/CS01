@@ -26,6 +26,9 @@ class Reelshort : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         if (page > 1) return newHomePageResponse(request.name, emptyList())
 
         val shelf = fetchShelfWithFallback(request.data)
@@ -37,6 +40,7 @@ class Reelshort : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val keyword = query.trim()
         if (keyword.isBlank()) return emptyList()
 
@@ -48,6 +52,7 @@ class Reelshort : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val bookId = extractBookId(url)
         if (bookId.isBlank()) throw ErrorLoadingException("ID tidak ditemukan")
 
@@ -119,6 +124,7 @@ class Reelshort : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val parsed = parseJson<LoadData>(data)
         val bookId = parsed.bookId ?: return false
         val episode = parsed.episode ?: return false

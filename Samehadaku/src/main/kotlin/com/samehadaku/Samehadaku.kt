@@ -38,6 +38,9 @@ class Samehadaku : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
 
         context?.let { StarPopupHelper.showStarPopupIfNeeded(it) }
 
@@ -105,6 +108,7 @@ class Samehadaku : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         return app.get("$mainUrl/?s=$query")
             .document
             .select("div.animposx")
@@ -112,6 +116,7 @@ class Samehadaku : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title = document.selectFirst("h1.entry-title")
@@ -187,6 +192,7 @@ class Samehadaku : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         app.get(data).document
             .select("div#downloadb li")

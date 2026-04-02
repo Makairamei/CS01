@@ -105,6 +105,9 @@ class BstationProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val home = mutableListOf<SearchResponse>()
         
         try {
@@ -223,6 +226,7 @@ class BstationProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val results = mutableListOf<SearchResponse>()
         
         try {
@@ -271,6 +275,7 @@ class BstationProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         Log.d(TAG, "Loading: $url")
         return when {
             url.contains("/play/") -> loadSeason(url)
@@ -418,6 +423,7 @@ class BstationProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         Log.d(TAG, "Loading links for: $data")
         
         try {

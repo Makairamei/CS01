@@ -44,6 +44,9 @@ class FreeReels : MainAPI() {
     private var session: Session? = null
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val safePage = page.coerceAtLeast(1)
         val tab = getPrimaryTab()
         val moduleResponse = getModuleIndex(tab)
@@ -81,6 +84,7 @@ class FreeReels : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val keyword = query.trim()
         if (keyword.isBlank()) return emptyList()
 
@@ -143,6 +147,7 @@ class FreeReels : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val seriesKey = extractSeriesKey(url)
         if (seriesKey.isBlank()) throw ErrorLoadingException("Series key tidak ditemukan")
 
@@ -210,6 +215,7 @@ class FreeReels : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val loadData = parseJson<EpisodeLoadData>(data)
         val headers = mapOf(
             "Referer" to "$mainUrl/",

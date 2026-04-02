@@ -50,6 +50,9 @@ class JioHotstarProvider : MainAPI() {
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val document = app.get(
             "$mainUrl/mobile/home",
             cookies = getCookie(),
@@ -78,6 +81,7 @@ class JioHotstarProvider : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         val url = "$mainUrl/mobile/hs/search.php?s=$query&t=${APIHolder.unixTime}"
         val data = app.get(url, referer = "$mainUrl/home", cookies = getCookie()).parsed<SearchData>()
 
@@ -90,6 +94,7 @@ class JioHotstarProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse? {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val id = parseJson<Id>(url).id
         val data = app.get(
             "$mainUrl/mobile/hs/post.php?id=$id&t=${APIHolder.unixTime}",
@@ -200,6 +205,7 @@ class JioHotstarProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val (title, id) = parseJson<LoadData>(data)
         val playlist = app.get(
             "$newUrl/mobile/hs/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}",

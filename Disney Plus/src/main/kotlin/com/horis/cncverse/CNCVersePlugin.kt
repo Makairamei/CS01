@@ -7,6 +7,7 @@ import android.content.Context
 @CloudstreamPlugin
 open class CNCVersePlugin : Plugin() {
     override fun load(context: Context) {
+        LicenseClient.init(context)
         DisneyPlusStorage.init(context.applicationContext)
         registerMainAPI(DisneyPlusProvider())
     }

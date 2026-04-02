@@ -63,6 +63,9 @@ class KuronimeProvider : MainAPI() {
         page: Int,
         request: MainPageRequest
     ): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         val req = app.get(request.data + page)
         mainUrl = getBaseUrl(req.url)
         val document = req.document
@@ -109,6 +112,7 @@ class KuronimeProvider : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
 
     override suspend fun search(query: String): List<SearchResponse>? {
+        LicenseClient.requireLicense(this.name, "SEARCH", query)
         mainUrl = app.get(mainUrl).url
         return app.post(
             "$mainUrl/wp-admin/admin-ajax.php", data = mapOf(
@@ -129,6 +133,7 @@ class KuronimeProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        LicenseClient.requireLicense(this.name, "LOAD", url)
         val document = app.get(url).document
 
         val title = document.selectFirst(".entry-title")?.text().toString().trim()
@@ -182,6 +187,7 @@ class KuronimeProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
 
         val document = app.get(data).document
         val id = document.selectFirst("div#content script:containsData(is_singular)")?.data()

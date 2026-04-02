@@ -29,6 +29,9 @@ class HDO : TmdbProvider() {
     }
     
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        if (page == 1) {
+            LicenseClient.requireLicense(this.name, "HOME")
+        }
         // Show star popup on first home page visit (shared across all CNCVerse plugins)
         cont?.let { context ->
             withContext(Dispatchers.Main) {
@@ -46,6 +49,7 @@ class HDO : TmdbProvider() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        LicenseClient.requireLicense(this.name, "PLAY", data)
         val mediaData = AppUtils.parseJson<TmdbLink>(data).toLinkData()
         
         Log.d("HDOProvider", "Loading links for: ${mediaData.title} (${mediaData.type})")
