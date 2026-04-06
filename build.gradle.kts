@@ -47,6 +47,10 @@ cloudstream {
 android {  
     namespace = "com.phisher98"  
 
+    sourceSets {
+        getByName("main").java.srcDirs(rootProject.file("premium-config"))
+    }
+
     compileSdkVersion(35)  
 
     defaultConfig {  

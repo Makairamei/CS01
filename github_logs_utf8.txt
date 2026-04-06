@@ -1,0 +1,200 @@
+﻿2026-04-02T05:39:17.1396614Z 
+2026-04-02T05:39:17.1397052Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1399021Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:566:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1401364Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1402598Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1403101Z 
+2026-04-02T05:39:17.1403508Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1405483Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:567:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1407509Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1408759Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1409254Z 
+2026-04-02T05:39:17.1409892Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1411840Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:568:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1413918Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1415173Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1415659Z 
+2026-04-02T05:39:17.1416075Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1418019Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:569:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1420603Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1421919Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1422411Z 
+2026-04-02T05:39:17.1422816Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1424672Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:570:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1426676Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1428190Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1428688Z 
+2026-04-02T05:39:17.1429084Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1431284Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:571:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1433377Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1434643Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1435136Z 
+2026-04-02T05:39:17.1435562Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1437514Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:572:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1439844Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1441119Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1441620Z 
+2026-04-02T05:39:17.1442021Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1443991Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:573:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1446033Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1447296Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1447801Z 
+2026-04-02T05:39:17.1448212Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1450573Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:574:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1452667Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1453930Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1454428Z 
+2026-04-02T05:39:17.1454835Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1456797Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:575:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1458981Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1460698Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1461210Z 
+2026-04-02T05:39:17.1461626Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1463564Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:576:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1465617Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1466876Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1467706Z 
+2026-04-02T05:39:17.1468125Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1470309Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:577:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1472371Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1473634Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1474123Z 
+2026-04-02T05:39:17.1474529Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1476504Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraStream.kt:578:9 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+2026-04-02T05:39:17.1478587Z - To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+2026-04-02T05:39:17.1480085Z - To keep applying to the value parameter only, use the '@param:' annotation target.
+2026-04-02T05:39:17.1480589Z 
+2026-04-02T05:39:17.1481011Z See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+2026-04-02T05:39:17.1482977Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraUtils.kt:327:28 'fun fromTwoLettersToLanguage(input: String): String?' is deprecated. Default language code changed to IETF BCP 47 tag.
+2026-04-02T05:39:17.1485745Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraUtils.kt:333:27 'fun fromTwoLettersToLanguage(input: String): String?' is deprecated. Default language code changed to IETF BCP 47 tag.
+2026-04-02T05:39:17.1488511Z w: file:///home/runner/work/CS01/CS01/src/SoraStream/src/main/kotlin/com/hexated/SoraUtils.kt:334:27 'fun fromTwoLettersToLanguage(input: String): String?' is deprecated. Default language code changed to IETF BCP 47 tag.
+2026-04-02T05:39:18.5501542Z 
+2026-04-02T05:39:18.5502095Z > Task :SoraStream:compileDex
+2026-04-02T05:39:18.5503089Z Compiled dex to /home/runner/work/CS01/CS01/src/SoraStream/build/intermediates/classes.dex
+2026-04-02T05:39:18.5503666Z 
+2026-04-02T05:39:18.5503862Z > Task :SoraStream:make
+2026-04-02T05:39:18.5504657Z Made Cloudstream package at /home/runner/work/CS01/CS01/src/SoraStream/build/SoraStream.cs3
+2026-04-02T05:39:18.6504112Z 
+2026-04-02T05:39:18.6504702Z > Task :makePluginsJson
+2026-04-02T05:39:18.6505358Z Created /home/runner/work/CS01/CS01/src/build/plugins.json
+2026-04-02T05:39:18.6505746Z 
+2026-04-02T05:39:18.6506588Z [Incubating] Problems report is available at: file:///home/runner/work/CS01/CS01/src/build/reports/problems/problems-report.html
+2026-04-02T05:39:18.6507311Z 
+2026-04-02T05:39:18.6507859Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+2026-04-02T05:39:18.6508430Z 
+2026-04-02T05:39:18.6509269Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-04-02T05:39:18.6510338Z 
+2026-04-02T05:39:18.6513378Z For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-04-02T05:39:18.6514343Z 
+2026-04-02T05:39:18.6514554Z BUILD SUCCESSFUL in 2m 54s
+2026-04-02T05:39:18.6514995Z 621 actionable tasks: 621 executed
+2026-04-02T05:39:19.0151971Z ##[group]Run cd $GITHUB_WORKSPACE/builds
+2026-04-02T05:39:19.0152337Z [36;1mcd $GITHUB_WORKSPACE/builds[0m
+2026-04-02T05:39:19.0152652Z [36;1mgit config --local user.email "actions@github.com"[0m
+2026-04-02T05:39:19.0152996Z [36;1mgit config --local user.name "GitHub Actions"[0m
+2026-04-02T05:39:19.0153267Z [36;1mgit add .[0m
+2026-04-02T05:39:19.0153612Z [36;1mgit commit --amend -m "Build $GITHUB_SHA" || exit 0   # do not error if nothing to commit[0m
+2026-04-02T05:39:19.0154216Z [36;1mgit push --force[0m
+2026-04-02T05:39:19.0183597Z shell: /usr/bin/bash -e {0}
+2026-04-02T05:39:19.0183838Z env:
+2026-04-02T05:39:19.0184126Z   JAVA_HOME: /opt/hostedtoolcache/Java_Adopt_jdk/21.0.10-7.0.LTS/x64
+2026-04-02T05:39:19.0184552Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Adopt_jdk/21.0.10-7.0.LTS/x64
+2026-04-02T05:39:19.0184908Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-04-02T05:39:19.0185182Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-04-02T05:39:19.0185473Z ##[endgroup]
+2026-04-02T05:39:19.1304201Z [builds a5b96d6] Build 3bc19093a03103cb54e21005e4cc4b64ea6f782e
+2026-04-02T05:39:19.1305087Z  Author: HXznxinhanba10fa9v-coDekxz <janxinhanbafav@gmail.com>
+2026-04-02T05:39:19.1305697Z  Date: Thu Feb 19 00:16:55 2026 +0700
+2026-04-02T05:39:19.1306142Z  59 files changed, 1235 insertions(+)
+2026-04-02T05:39:19.1306592Z  create mode 100644 AnichinMoe.cs3
+2026-04-02T05:39:19.1307075Z  create mode 100644 Animasu.cs3
+2026-04-02T05:39:19.1307779Z  create mode 100644 AnimeSailProvider.cs3
+2026-04-02T05:39:19.1308216Z  create mode 100644 Animekhor.cs3
+2026-04-02T05:39:19.1308495Z  create mode 100644 Animexin.cs3
+2026-04-02T05:39:19.1308760Z  create mode 100644 Anoboy.cs3
+2026-04-02T05:39:19.1309021Z  create mode 100644 Auratail.cs3
+2026-04-02T05:39:19.1309303Z  create mode 100644 BstationProvider.cs3
+2026-04-02T05:39:19.1309881Z  create mode 100644 Cinemacity.cs3
+2026-04-02T05:39:19.1310171Z  create mode 100644 Disney Plus.cs3
+2026-04-02T05:39:19.1310470Z  create mode 100644 Donghuastream.cs3
+2026-04-02T05:39:19.1310755Z  create mode 100644 Donghub.cs3
+2026-04-02T05:39:19.1311018Z  create mode 100644 DramaFull.cs3
+2026-04-02T05:39:19.1311288Z  create mode 100644 Dramabox.cs3
+2026-04-02T05:39:19.1311570Z  create mode 100644 DramaidProvider.cs3
+2026-04-02T05:39:19.1311848Z  create mode 100644 Dubbindo.cs3
+2026-04-02T05:39:19.1312108Z  create mode 100644 Dutamovie.cs3
+2026-04-02T05:39:19.1312361Z  create mode 100644 FilmApik.cs3
+2026-04-02T05:39:19.1312621Z  create mode 100644 FilmKita.cs3
+2026-04-02T05:39:19.1312874Z  create mode 100644 Flickreels.cs3
+2026-04-02T05:39:19.1313143Z  create mode 100644 FreeReels.cs3
+2026-04-02T05:39:19.1313404Z  create mode 100644 Fufafilm.cs3
+2026-04-02T05:39:19.1313663Z  create mode 100644 Funmovieslix.cs3
+2026-04-02T05:39:19.1313937Z  create mode 100644 Gojodesu.cs3
+2026-04-02T05:39:19.1314185Z  create mode 100644 Goodshort.cs3
+2026-04-02T05:39:19.1314450Z  create mode 100644 HDOProvider.cs3
+2026-04-02T05:39:19.1314728Z  create mode 100644 Hidoristream.cs3
+2026-04-02T05:39:19.1315008Z  create mode 100644 IdlixProvider.cs3
+2026-04-02T05:39:19.1315284Z  create mode 100644 Kawanfilm.cs3
+2026-04-02T05:39:19.1315545Z  create mode 100644 Kickassanime.cs3
+2026-04-02T05:39:19.1315822Z  create mode 100644 Kissasian.cs3
+2026-04-02T05:39:19.1316115Z  create mode 100644 KisskhProvider.cs3
+2026-04-02T05:39:19.1316398Z  create mode 100644 Klikxxi.cs3
+2026-04-02T05:39:19.1316655Z  create mode 100644 Kuramanime.cs3
+2026-04-02T05:39:19.1316951Z  create mode 100644 KuronimeProvider.cs3
+2026-04-02T05:39:19.1317255Z  create mode 100644 LayarKacaProvider.cs3
+2026-04-02T05:39:19.1317546Z  create mode 100644 Layarasia.cs3
+2026-04-02T05:39:19.1317807Z  create mode 100644 Melongmovie.cs3
+2026-04-02T05:39:19.1318101Z  create mode 100644 MovieBoxProvider.cs3
+2026-04-02T05:39:19.1318447Z  create mode 100644 NetflixMirrorProvider.cs3
+2026-04-02T05:39:19.1318755Z  create mode 100644 Ngefilm.cs3
+2026-04-02T05:39:19.1319026Z  create mode 100644 Nimegami.cs3
+2026-04-02T05:39:19.1319704Z  create mode 100644 Nomat.cs3
+2026-04-02T05:39:19.1320037Z  create mode 100644 NontonAnimeIDProvider.cs3
+2026-04-02T05:39:19.1320343Z  create mode 100644 OneTouchTV.cs3
+2026-04-02T05:39:19.1320631Z  create mode 100644 OploverzProvider.cs3
+2026-04-02T05:39:19.1320919Z  create mode 100644 Oppadrama.cs3
+2026-04-02T05:39:19.1321203Z  create mode 100644 OtakudesuProvider.cs3
+2026-04-02T05:39:19.1321503Z  create mode 100644 Pencurimovie.cs3
+2026-04-02T05:39:19.1321951Z  create mode 100644 Pmsm.cs3
+2026-04-02T05:39:19.1322218Z  create mode 100644 Pusatfilm.cs3
+2026-04-02T05:39:19.1322477Z  create mode 100644 Reelshort.cs3
+2026-04-02T05:39:19.1322742Z  create mode 100644 Samehadaku.cs3
+2026-04-02T05:39:19.1323004Z  create mode 100644 Sflix.cs3
+2026-04-02T05:39:19.1323254Z  create mode 100644 SoraStream.cs3
+2026-04-02T05:39:19.1323515Z  create mode 100644 Tokusatsu.cs3
+2026-04-02T05:39:19.1323780Z  create mode 100644 Watch32.cs3
+2026-04-02T05:39:19.1324053Z  create mode 100644 WinbuProvider.cs3
+2026-04-02T05:39:19.1324334Z  create mode 100644 plugins.json
+2026-04-02T05:39:19.2644474Z remote: Permission to Makairamei/CS01.git denied to github-actions[bot].
+2026-04-02T05:39:19.2645196Z fatal: unable to access 'https://github.com/Makairamei/CS01/': The requested URL returned error: 403
+2026-04-02T05:39:19.2674846Z ##[error]Process completed with exit code 128.
+2026-04-02T05:39:19.2753923Z Post job cleanup.
+2026-04-02T05:39:19.4400463Z Post job cleanup.
+2026-04-02T05:39:19.5347063Z [command]/usr/bin/git version
+2026-04-02T05:39:19.5385783Z git version 2.53.0
+2026-04-02T05:39:19.5428246Z Temporarily overriding HOME='/home/runner/work/_temp/88be55bd-4bab-4986-b633-d11f2a67139f' before making global git config changes
+2026-04-02T05:39:19.5429949Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-02T05:39:19.5435590Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/CS01/CS01/builds
+2026-04-02T05:39:19.5473674Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-02T05:39:19.5508297Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-02T05:39:19.5760277Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-02T05:39:19.5783721Z http.https://github.com/.extraheader
+2026-04-02T05:39:19.5795613Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-02T05:39:19.5829161Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-02T05:39:19.6219865Z Post job cleanup.
+2026-04-02T05:39:19.7188010Z [command]/usr/bin/git version
+2026-04-02T05:39:19.7222983Z git version 2.53.0
+2026-04-02T05:39:19.7264489Z Temporarily overriding HOME='/home/runner/work/_temp/2d1ebbc6-2662-4325-8bd2-b8db95177d15' before making global git config changes
+2026-04-02T05:39:19.7265855Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-02T05:39:19.7270974Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/CS01/CS01/src
+2026-04-02T05:39:19.7312351Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-02T05:39:19.7345117Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-02T05:39:19.7588434Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-02T05:39:19.7610655Z http.https://github.com/.extraheader
+2026-04-02T05:39:19.7622514Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-02T05:39:19.7654746Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-02T05:39:19.7992915Z Cleaning up orphan processes
+2026-04-02T05:39:19.8324768Z Terminate orphan process: pid (2685) (java)
+2026-04-02T05:39:19.8351570Z Terminate orphan process: pid (2823) (java)
+2026-04-02T05:39:19.8365993Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4.2.2, actions/setup-java@v4.6.0, android-actions/setup-android@v3.2.2. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
